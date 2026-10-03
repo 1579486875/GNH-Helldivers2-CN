@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 脚本运行时生成的备份与日志
+tools/backup/
+tools/notes/
+tools/extracted/
+
+# 临时文件
+*.tmp
+Thumbs.db
+desktop.ini
