@@ -1,5 +1,7 @@
 # GNH · Helldivers 2 界面汉化包
 
+> **📦 下载**：[最新版本（Release）](https://github.com/1579486875/GNH-Helldivers2-CN/releases/latest) —— 主包（零冲突）与 Transmog 可选包都在 Release 页，在 HD2 Arsenal 里导入即可。
+
 > 把未自带中文的 HD2 模组界面（游戏内 MODS 选项菜单、Transmog 装甲变体界面）改成简体中文。
 > 采用**运行时接管**方案：只提供全新资源路径，**不覆盖、不修改任何上游模组文件**，因此主包**零冲突**。
 
