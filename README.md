@@ -34,7 +34,7 @@
 
 | 目标 | 位置 | 汉化内容 |
 | --- | --- | --- |
-| **MODS 选项目录**（ESC → 模组） | `Vanilla Plus Megapack …/options/ModOptionsMenu` 的 patch | **444 条**界面文本：覆盖当前启用的 20 个模组 —— 模组名、模组简介、全部选项名、选项值与选项说明 |
+| **MODS 选项目录**（ESC → 模组） | `Vanilla Plus Megapack …/options/ModOptionsMenu` 的 patch | **473 条**界面文本：覆盖模组库中的全部 22 个模组 —— 模组名、模组简介、全部选项名、选项值与选项说明 |
 | **装甲变体界面**（军械库 → 防具 → 自订变体） | `HD2 Transmog (Foundation)` 的 patch | 35 处界面文本：`CREATE VARIANT`、`Choose a look / base stats / passive`、`Back / Cancel / Create`、`LOOK / PASSIVE / BASE STATS`、`ARMOR RATING / SPEED / STAMINA REGEN`、`Not selected`、底部说明等 |
 
 **已汉化**（原本就是中文，未改动）：更好的大厅管理、浅水区飞扑、Mod 键位菜单、敌方模板预测、舰内站点快捷键 —— 这些模组自带 Bingus Text 翻译键，由整合包里的 `ChineseTranslation` 补丁翻译。
@@ -356,7 +356,7 @@ end
 
 Arsenal 的冲突检测比的是「两个模组是否提供同一个游戏资源」。主包提供的两个资源路径是本模组**独有**的：
 
-- `mods/gnh_cn/zh_hans`（运行时接管代码 + 444 条词表）
+- `mods/gnh_cn/zh_hans`（运行时接管代码 + 473 条词表）
 - `mods/gnh_cn/readme`
 
 用资源 ID 校验过：这两个 ID 在模组库里**只有本模组提供**。汉化通过**运行时接管** `ModOptionsMenu.register_option` 实现，不触碰任何其他模组的文件。
@@ -410,7 +410,7 @@ Arsenal 会把每个模组的文件清单缓存进 `mod_headers` 表。旧版缓
 | --- | --- | --- |
 | **编译** | Lua 编译（真实 Lua 运行时） | 两个包共 3 个 entry **全部编译成功** |
 | **XML** | patch 容器格式 | 头部字段自洽、每条 entry 的记录偏移/长度校验、**资源 ID 全部匹配** |
-| **翻译** | 词表完整性 | 444 条，无空键/空值/占位符；**全部就位**于主包 Lua（Lua 编译校验通过） |
+| **翻译** | 词表完整性 | 473 条，无空键/空值/占位符；**全部就位**于主包 Lua（Lua 编译校验通过） |
 | **Def 引用** | 资源 ID ↔ 路径映射 | ID 与 murmur64(路径) 一一对应；两包资源**互不重叠**；**主包在模组库内提供者数 = 1（零冲突）** |
 | **构建配置** | manifest.json | JSON 合法、Guid/Version/Options 齐全、Include 目录存在 |
 | **代码与注释** | Lua 代码与注释一致性 | 4 项声明逐条核对通过：浅拷贝 ✓ 每帧轮询 ✓ 幂等标记 ✓ 不直接改调用方的表 ✓ |
@@ -473,3 +473,11 @@ zip 位置：
 **校验**：主包 Lua 经真实 Lua 运行时 `load()` 编译通过；词表 444 条全部就位于包内；
 20 个模组的 manifest 文本仅剩上述刻意保留项。
 
+### 2026-10-04（二次更新）　词表 444 → 473 条
+
+- 新增模组：**HD2 SmoothBoot**、**HD2 C4 快捷操作**、**目标追踪器**、**机甲部位血量 HUD**
+- 跟进更新：**更聪明的护卫犬与哨戒炮 4.6.3**、**HD2 Transmog 基础组件 0.2.1（实验版）**
+- **重要修复**：`build_packs2.py` 原先把 Transmog 汉化包的基底路径写死为 0.1.5，
+  在上游更新到 0.2.1 后会把版本**回退**。现已改为**动态取模组库中的当前版本**（备份仅作兜底）。
+  同时给 `cn_strings.py` 的合并流程加上"只取指定词表变量"的约束，避免把 Python 内置名写进词表。
+- 顺带清理了 Arsenal 模组库中 8 条失效记录，并修正 6 条指向 `temp_extract_*` 的错误路径。

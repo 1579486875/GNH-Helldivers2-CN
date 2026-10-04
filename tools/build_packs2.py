@@ -1,21 +1,25 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """build_packs2.py -- 重构为两个包：
    A) GNH-Chinese-Simplified-Pack   —— 零冲突：只提供全新资源 mods/gnh_cn/*，运行时接管 ModOptionsMenu
    B) GNH-Transmog-CN-Addon         —— 可选：覆盖式汉化 Transmog 界面（与 HD2 Transmog 有覆盖关系）
 """
 import os, sys, io, json, uuid, shutil, hashlib
+sys.path.insert(0, r"E:\TAML\_scratch\hd2")
 from cn_strings import CN
 from hd2_patch import PatchFile, murmur64a, p32, p64, align8
 
 MODS = os.path.join(os.environ["LOCALAPPDATA"], "hd2arsenal", "mods")
-BACKUP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backup")
-DATA = os.environ.get("HD2_DATA", r"C:\SteamLibrary\steamapps\common\Helldivers 2\data")
-LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "notes", "build_packs2.txt")
+BACKUP = r"E:\TAML\_scratch\hd2\backup"
+DATA = r"C:\SteamLibrary\steamapps\common\Helldivers 2\data"
+LOG = r"E:\TAML\_scratch\hd2\notes\build_packs2.txt"
 PACK_A = os.path.join(MODS, "GNH-Chinese-Simplified-Pack")
 PACK_B = os.path.join(MODS, "GNH-Transmog-CN-Addon")
 TEMPLATE = os.path.join(MODS, "Vanilla Plus Megapack Rows V36 zh-Hans zh-Hant CN 16627 36 2026-10-01T05-16Z UR0syXwpP_AR640294",
                         "options", "ChineseTranslation", "9ba626afa44a3aa3.patch_0")
-TM_PATCH = os.path.join(MODS, "HD2 Transmog (Foundation) 16633 0.1.5 2026-09-28T20-24Z 8MtblTk5q_AR931809", "Addon", "9ba626afa44a3aa3.patch_0")
+import glob as _glob
+_tm = sorted(_glob.glob(os.path.join(MODS, "HD2 Transmog*", "Addon", "9ba626afa44a3aa3.patch_0")),
+             key=os.path.getmtime)
+TM_PATCH = _tm[-1] if _tm else os.path.join(MODS, "HD2 Transmog (Foundation) 16633 0.1.5 2026-09-28T20-24Z 8MtblTk5q_AR931809", "Addon", "9ba626afa44a3aa3.patch_0")
 buf = io.StringIO(); W = lambda *a: print(*a, file=buf)
 
 def lua_str(s):
@@ -102,8 +106,9 @@ def build_runtime_lua():
     return "\n".join(L) + "\n"
 
 def build_transmog_lua():
+    # 优先用模组库里的"当前版本"（更新后自动跟随）；备份仅作兜底
     bk = os.path.join(BACKUP, os.path.relpath(TM_PATCH, MODS))
-    src = bk if os.path.exists(bk) else TM_PATCH
+    src = TM_PATCH if os.path.exists(TM_PATCH) else bk
     lua = PatchFile.load(src).text(-1)
     REPL = [("'CREATE VARIANT  '", "'创建变体  '"), ("'Choose a look'", "'选择外观'"),
         ("'Choose base stats'", "'选择基础属性'"), ("'Choose stats'", "'选择属性'"),
