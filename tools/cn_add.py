@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """cn_add.py -- 新增界面文本词表（选项名 / 选项值）。键必须与模组原文逐字符一致。"""
 
 CN_ADD = {
@@ -235,7 +235,7 @@ CN_ADD = {
     'HUD layout': 'HUD 布局',
     'Show when idle': '待机时显示',
     'Game crosshair': '游戏自带准星',
-    'HD2 HUD+': 'HD2 HUD+',
+    'HD2 HUD+': 'HD2 抬头显示+',
 
     # ---------- Concept Mech ----------
     'All Mechs': '全部机甲',
