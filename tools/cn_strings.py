@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 """cn_strings.py —— 英文原文 -> 简体中文 词表（Mod Options Menu 选项文本 / 模组名 / 选项说明）。
 
-键必须与模组注册时传入的字符串逐字符一致（多行 .. 拼接的按拼接后的完整文本为键）。
-'Off' 故意保留原样：Mod Options Menu 会用游戏自带的原生词（关）。
-
-来源：cn_add（选项名/值）、cn_desc（选项说明）、cn_fix（补漏）、cn_mods / cn_mods2（模组名）、
-cn_new（新增模组），合并去重后共 473 条。
+合并自 cn_add / cn_desc / cn_fix / cn_mods / cn_mods2 / cn_new，共 533 条；
+键必须与模组注册时传入的字符串逐字符一致。
 """
 
 CN = {
@@ -482,4 +479,64 @@ CN = {
     "How your dogs and sentries choose what to shoot. Armor Intelligence: they leave alone armor they can't hurt, fire only short bursts at Heavy Devastators, and no sentry wastes ammo on dropships. Target Prioritization: your dog goes for the closest threat to you first; your sentries deal with enemies at their feet, Gunships and the armor that suits the gun first. Turn off to leave both to the game.": '你的护卫犬与哨戒炮如何选择射击目标。装甲识别：放过打不穿的装甲目标，对重型毁灭者只做短点射，哨戒炮不会把弹药浪费在运输舰上。目标优先：护卫犬优先攻击离你最近的威胁；哨戒炮优先处理脚下的敌人、炮艇以及适合其火力的装甲。关闭后两项都交还给游戏。',
     "Who your dog and your sentries never fire through: they hold fire while that helldiver is in their line of fire, don't swing their fire across them, mortars and the rocket sentry leave enemies next to them alone, and the Tesla Tower doesn't zap them or arc into them. Turn off at your own risk: they will fire through anyone. Everything else keeps working.": '你的护卫犬与哨戒炮绝不误伤的对象：当该潜兵位于射线上时它们会停火，不会把火力扫过对方，迫击炮与火箭哨戒炮会放过紧挨着对方的敌人，特斯拉塔也不会电到或电弧到对方。关闭后果自负：它们会朝任何人开火。其余功能不受影响。',
     "Laser out of the barrel of your guard dog and your sentries (not the mortars) toward their targets, shown only on your screen: green while they fire, flashing red when the safety stops a shot, flashing yellow when the dog's target goes out of sight. The Tesla Tower shows its reach as a yellow ring. Line: thin, hidden by walls. Glow: a soft beam that shows through walls.": '从护卫犬与哨戒炮（迫击炮除外）炮口射向目标的激光，仅你可见：开火时为绿色，被安全防护拦下时闪红，护卫犬丢失目标时闪黄。特斯拉塔以黄圈显示其作用范围。细线：纤细，会被墙挡住。辉光：柔和光束，可透过墙壁看到。',
+    'Show objective tracker': '显示任务目标追踪',
+    'Show only while map is open': '仅在打开地图时显示',
+    'Display the tracker with the tactical map. The panel also appears in ESC for positioning and resizing.': '与战术地图一同显示追踪面板。该面板也会出现在 ESC 菜单中，供你调整位置与大小。',
+    'Maximum visible targets': '最多显示目标数',
+    'Show the nearest targets, sorted by distance. Panel height also limits how many rows fit.': '显示最近的目标，按距离排序。面板高度也会限制可容纳的行数。',
+    'Maximum distance (meters)': '最大距离（米）',
+    'Direct distance from your Helldiver to loaded objectives.': '从你的绝地潜兵到已加载目标的直线距离。',
+    'Text and icon size (%)': '文字与图标大小（%）',
+    'Set the text and icon size. Resizing the panel keeps this size and changes how many targets fit.': '设置文字与图标大小。调整面板尺寸会保留该字号，并改变可容纳的目标数量。',
+    'Background opacity (%)': '背景不透明度（%）',
+    'Icon and distance colors': '图标与距离颜色',
+    'Objective colors': '目标配色',
+    'Helldiver gold': '绝地潜兵金',
+    'Ice white': '冰白',
+    'Row spacing': '行间距',
+    'Compact': '紧凑',
+    'Comfortable': '宽松',
+    'Support and retrieval objectives': '支援与回收类目标',
+    'Radar stations, SEAF artillery, SAM sites, escape pod data and mutant larvae.': '雷达站、SEAF 火炮、防空导弹阵地、逃生舱数据与变异幼虫。',
+    'Hostile nests and installations': '敌方巢穴与设施',
+    'Research objective sites': '研究类目标地点',
+    'Specimen pickups': '样本拾取物',
+    'Show Automaton heads and mutated eggs with distance and direction.': '显示自动人形头颅与变异卵的距离和方向。',
+    'Show item carrier': '显示物品携带者',
+    'Show the carrier squad tag for Automaton heads, mutated eggs and mutant larvae.': '为自动人形头颅、变异卵与变异幼虫显示携带者的小队标签。',
+    'Hide completed objectives': '隐藏已完成目标',
+    'Hide objectives after the game reports completion. Completion affects only your HUD.': '当游戏报告目标完成后将其隐藏。该完成状态只影响你自己的 HUD。',
+    'Hide destroyed sites': '隐藏已被摧毁的地点',
+    'For sites without a readable objective state, hide the entry when every observed structure is dead or removed. Native objective state takes priority when available.': '对于无法读取任务状态的地点，当观察到的所有结构均已被摧毁或移除时隐藏该条目。若可读取原生任务状态，则以原生状态为准。',
+    'Show panel aboard ship': '在飞船上也显示面板',
+    'Detailed logging': '详细日志',
+    'Write objective state details to the local log for troubleshooting.': '将任务状态详情写入本地日志，便于排查问题。',
+    'HD2 Transmog': 'HD2 幻化',
+    'Preview style': '预览风格',
+    'Choose the lighting for generated previews. HD2 uses the approved rim lighting; Studio emphasizes front detail. Both styles stay cached. Items without an author choice use HD2.': '选择生成预览所用的光照。HD2 使用官方认可的轮廓光；Studio 更强调正面细节。两种风格的缓存都会保留。作者未指定时使用 HD2。',
+    "Mod author's choice": '作者指定',
+    'Force HD2': '强制 HD2',
+    'Force Studio': '强制 Studio',
+    'Armory 3D preview': '军械库 3D 预览',
+    'Full render': '完整渲染',
+    'Game default': '游戏默认',
+    "Full render draws the large Armory model through the game's full pipeline, with hair and the lighting of the generated previews. It needs temporal anti-aliasing; without it, and with Game default, the game draws the model itself.": '完整渲染会通过游戏的完整渲染管线绘制大型军械库模型，包含头发以及生成预览所用的光照。它需要开启时间抗锯齿；若未开启，或者选择「游戏默认」，则由游戏自行绘制模型。',
+    'Regenerate previews': '重新生成预览',
+    'Keep cached images': '保留缓存图像',
+    'Regenerate now': '立即重新生成',
+    'Apply Regenerate now to refresh generated previews for the selected style. Requires a working renderer and an open Armory item list. Cached images remain available if rendering is unavailable.': '选择「立即重新生成」可用当前风格刷新已生成的预览。需要渲染器可用且军械库物品列表已打开。若渲染不可用，仍会保留缓存图像。',
+    'SHOW / HIDE BADGE': '显示/隐藏徽章',
+    'BADGE BIGGER': '放大徽章',
+    'BADGE SMALLER': '缩小徽章',
+    'MOVE BADGE UP': '上移徽章',
+    'MOVE BADGE DOWN': '下移徽章',
+    'MOVE BADGE LEFT': '左移徽章',
+    'MOVE BADGE RIGHT': '右移徽章',
+    'Select Next Transmog Piece': '选择下一件幻化部件',
+    'Next Transmog Variant': '下一个幻化变体',
+    'Previous Transmog Variant': '上一个幻化变体',
+    'Refresh Transmog Look': '刷新幻化外观',
+    'Custom Variant': '自订变体',
+    'Shallow Water Diving': '浅水潜行',
+    'Better Lobby Management': '大厅管理',
 }

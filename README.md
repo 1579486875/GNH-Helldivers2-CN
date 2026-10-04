@@ -34,7 +34,7 @@
 
 | 目标 | 位置 | 汉化内容 |
 | --- | --- | --- |
-| **MODS 选项目录**（ESC → 模组） | `Vanilla Plus Megapack …/options/ModOptionsMenu` 的 patch | **473 条**界面文本：覆盖模组库中的全部 22 个模组 —— 模组名、模组简介、全部选项名、选项值与选项说明 |
+| **MODS 选项目录**（ESC → 模组） | 运行时接管 `ModOptionsMenu`（主包资源 `mods/gnh_cn/zh_hans`） | **533 组词表（含大写形式共 1010 条）**：选项名、选项值、选项说明、模组名 —— 覆盖 Aggro Counter 仇恨计数、Armored Overhaul 装甲大修、Smarter Guard Dogs & Sentries 更聪明的护卫犬与哨戒炮、Objective Tracker 任务目标追踪、HD2 Transmog 幻化、Better Lobby Management 大厅管理等 |
 | **装甲变体界面**（军械库 → 防具 → 自订变体） | `HD2 Transmog (Foundation)` 的 patch | 35 处界面文本：`CREATE VARIANT`、`Choose a look / base stats / passive`、`Back / Cancel / Create`、`LOOK / PASSIVE / BASE STATS`、`ARMOR RATING / SPEED / STAMINA REGEN`、`Not selected`、底部说明等 |
 
 **已汉化**（原本就是中文，未改动）：更好的大厅管理、浅水区飞扑、Mod 键位菜单、敌方模板预测、舰内站点快捷键 —— 这些模组自带 Bingus Text 翻译键，由整合包里的 `ChineseTranslation` 补丁翻译。
@@ -75,7 +75,8 @@ python tools\restore_hd2_cn.py
 - 每个 entry 的资源 ID = `murmur_hash_64A("mods/…路径")`，与内容无关 —— 所以**替换 Lua 内容不影响资源定位**，只要更新「文件总大小 / entry 长度 / 长度+8」三个字段即可。
 - 工具与脚本（可重复使用）：
   - `tools\hd2_patch.py` —— patch 读写、校验（自检覆盖全部 108 个 Lua entry，资源 ID 全部匹配）
-  - `tools\cn_strings.py` —— 444 条英文→中文词表（合并自 `cn_add.py` / `cn_desc.py` / `cn_fix.py` / `cn_mods.py`）
+  - `tools\cn_strings.py` —— 533 组英文→中文词表（合并自 `cn_add.py` / `cn_desc.py` / `cn_fix.py` /
+    `cn_mods.py` / `cn_mods2.py` / `cn_new.py` / `cn_ui3.py`）；运行时还会自动补一份全大写键，共 1010 条
   - `tools\apply_cn_menu.py` / `apply_cn_transmog.py` —— 一键重新应用汉化（**幂等保护**，已应用过会拒绝重复执行）
 - 每一步都用 `luaparser` 做了 **Lua 语法校验**（改前、改后各一次），并用 `hd2_patch.PatchFile` 复核了 patch 结构。
 
@@ -481,3 +482,102 @@ zip 位置：
   在上游更新到 0.2.1 后会把版本**回退**。现已改为**动态取模组库中的当前版本**（备份仅作兜底）。
   同时给 `cn_strings.py` 的合并流程加上"只取指定词表变量"的约束，避免把 Python 内置名写进词表。
 - 顺带清理了 Arsenal 模组库中 8 条失效记录，并修正 6 条指向 `temp_extract_*` 的错误路径。
+
+---
+
+﻿## 附录三：MODS 面板「先注册的模组漏翻」根因与修复（2026-10-05）
+
+### 一、现象
+
+游戏内 `ESC → 模组`：
+
+| 面板 | 现象 |
+| --- | --- |
+| Aggro Counter（仇恨计数） | 全中文 ✅ |
+| Smarter Guard Dogs & Sentries | 全中文 ✅（左侧列表已是「更聪明的护卫犬与哨戒炮」） |
+| **Objective Tracker（任务目标追踪）** | **全英文 ❌** |
+| **HD2 TRANSMOG（HD2 幻化）** | **全英文 ❌** |
+
+### 二、定位（读游戏日志，不靠猜）
+
+游戏为每个模组单独写日志，两个日志一对照就清楚了：
+
+| 证据 | 说明 |
+| --- | --- |
+| `Logs\GNHChinesePack.log` 里有 `已接管 ModOptionsMenu.register_option（词表 897 条）` 与 `汉化: Show Badge -> 显示徽章` | 接管逻辑本身没问题，确实在翻译 |
+| `Logs\ModOptionsMenu.log` 的注册顺序：`Mod Options Menu initialized.` → Objective Tracker 17 个选项 → Better Lobby Management 3 个 → **（汉化包在这里接管）** → Smarter Guard Dogs 6 个 → Shallow Water Diving 1 个 → Aggro Counter 15 个 → Armored Overhaul 11 个 → HD2 Transmog 3 个 | 汉化包的 Lua **比 Objective Tracker 晚执行** |
+| `GNHChinesePack.log` 的前 3 条是 `[function] -> [function]`（Better Lobby Management 的三个函数型 label） | 与上一条互相印证：接管点确实落在 Objective Tracker 之后 |
+
+**根因**：各模组的 Lua 由共享加载器按它自己的顺序执行，汉化包**无法保证排在最前面**。
+只包装 `register_option` 只能影响「接管之后」发生的注册，**先注册进来的选项在寄存器里已经是英文**，
+而字符串型界面文本是在注册那一刻被解析并缓存的，之后不会再解析。
+
+### 三、修复：实时接管 + 就地补翻
+
+1. **实时接管**（原有做法）：包装 `ModOptionsMenu.register_option`，翻译 `label / description / mod / choices`。
+2. **就地补翻**（本次新增，关键）：
+   - 用 `debug.getupvalue` 从 ModOptionsMenu 的导出函数（`register_option` / `get` / `set` / `ready` / `on_change`）里
+     取出它的内部 `state` —— 判据是**该 upvalue 同时含 `options` 与 `mods` 两张表**；
+   - 把**已经注册进来**的选项就地改成中文：`option.label`、`option.description`、`option.choices[i]`、`mod.title`；
+   - **为什么改 `choices` 是安全的**：`choice` 的值是 1 基下标（存在 `state.values[id]`），与显示文本无关；
+   - **为什么改完立刻生效**：ModOptionsMenu 每帧用 `shows_text(row + ROW_TEXT, option.label)` 校验行文本，
+     label 一变就判定页面失效并重建，下一帧用新文本重绘；
+   - 接管成功后**立刻补翻一次**，此后每 20 帧复查一次，连续 3 次没有新条目就停止（开销可忽略）。
+3. **顺带覆盖 Mod Bindings Menu**：包装 `ModBindingsMenu.register_binding(id, label, slot, options)` 的**第 2 个参数**，
+   并补翻 `state.registry` 里的 `text` / `label` / `category`，
+   因此 `SHOW / HIDE BADGE`、`MOVE BADGE UP` 等按键名也变中文。
+4. **兜底不写坏东西**：`debug` 取不到 `state` 时补翻静默失效（只写一条日志），实时接管照常工作；
+   所有补翻都在 `pcall` 里执行，绝不因为补翻出错而影响菜单本身。
+
+### 四、词表补充（473 → 533 组，含大写形式 1010 条）
+
+新增 `tools/cn_ui3.py`，60 组词条**逐字符取自各模组的 Lua 源**（源文件已 dump 到 `tools/` 之外的 `lua_dump/` 便于复核）：
+
+| 来源 | 内容 |
+| --- | --- |
+| Objective Tracker 0.4.12 | 17 个选项的全部 label / description / choices（32 条） |
+| HD2 Transmog 0.2.1 | `Preview style`、`Armory 3D preview`、`Regenerate previews` 三个选项及其选项值、说明 |
+| Aggro Counter 1.3 | Mod Bindings Menu 按键名：`SHOW / HIDE BADGE`、`BADGE BIGGER`、`MOVE BADGE UP` 等 7 条 |
+| HD2 Transmog | 按键名：`Select Next Transmog Piece`、`Next / Previous Transmog Variant` 等 |
+| 各模组 | MODS 页显示的模组名：`HD2 Transmog`、`Shallow Water Diving`、`Better Lobby Management` |
+
+扫描工具 `tools/scan_ui.py`：遍历模组库里全部 206 个 Lua entry，提取注册到菜单的界面文本，列出**词表里缺失**的条目。
+以后跟版本更新，只要重跑它就能知道还差哪些。
+
+### 五、可选包（Transmog 界面）的三处修复
+
+1. **修掉一处会让「自订变体」区块识别失败的替换**：上一版把 `section={title='Custom Variant'` 改成了中文，
+   而判定处 `header.text=='Custom Variant'` 仍是英文 —— 这两者本应成对出现。现在**两者都保持英文**，
+   只替换真正上屏的两处 `text('Custom Variant', ...)`。
+2. **补齐遗漏**：`MODIFIED UNIQUE`、`Default: `、`Now (temporary): `、`Modded `、`Name and create`、
+   `Set the look`、`D-pad / left stick: choose a look. A: select.`、`' saved'` / `' owned choices'`。
+3. **新增校验脚本 `tools/verify_tm.py`**：把上游原始 `foundation` 与汉化版逐行 diff，
+   并统计 `== '...'` / `~= '...'` / `['...']` 三类**比较 / 索引语境**里的字面量是否被改动。
+   **本次结果：受影响字面量 0 个** —— 即只动了上屏文本，没有动任何判定逻辑。
+
+### 六、验证（真实 Lua 运行时，而不是只看日志）
+
+`tools/test_pack_lua.py` 用 `lupa` 起真实 Lua 运行时，构造一个与 ModOptionsMenu 内部结构一致的替身
+（`state.options` / `state.mods` / `revision`），**先注册几个「比汉化包更早注册」的选项**，再加载主包的 Lua：
+
+| 检查项 | 结果 |
+| --- | --- |
+| 主包 Lua 编译并执行 | 通过，无报错 |
+| 补翻 toggle 选项名 | `Show objective tracker` → **显示任务目标追踪** |
+| 补翻 choice 选项名 | `Icon and distance colors` → **图标与距离颜色** |
+| 补翻 choice 选项值（大写形式） | `OBJECTIVE COLORS` → **目标配色**、`HELLDIVER GOLD` → **绝地潜兵金**、`ICE WHITE` → **冰白** |
+| 补翻 description | 整句中文，与词表逐字符一致 |
+| 补翻模组名 | `OBJECTIVE TRACKER` → **目标追踪器** |
+| 接管之后注册的选项 | `Show Badge` → **显示徽章**（实时翻译仍然有效） |
+| 补翻计数与 revision | 第 1 次扫描补翻 13 项，`revision` 正确自增，菜单会自动重绘 |
+
+### 七、顺带清理（这些是「汉化时好时坏」的隐藏原因）
+
+- Arsenal 包目录里残留三个**旧版散装 lua**：`cb78d3a9e61e5cd6.lua`（旧版 `mods/gnh_cn/zh_hans`）、
+  `14f0960cccd5967c.lua`（旧版 readme）、`d42a76efa2beb2e3.lua`（**基于 Transmog 0.1.5 的旧汉化**）。
+  它们是早期构建的遗留产物，留着会让 Arsenal 的部署结果不可预测。已备份到
+  `_scratch/hd2/backup/leftover-lua/` 后**删除**，现在两个包目录里各自只剩 `Addon/9ba626afa44a3aa3.patch_0` 与 `manifest.json`。
+- 部署脚本原先用「文件大小 > 2 MB」判断该删哪个 patch，**会误删上游原版的 Transmog Foundation**。
+  现在改成按内容精确判定：
+  - 包 A：该 patch 是否提供 `mods/gnh_cn/*` 资源；
+  - 包 B：那份 `mods/hd2transmog/foundation` 里**有没有汉字**（上游原版一个汉字都没有，实测 zh 计数 = 0）。

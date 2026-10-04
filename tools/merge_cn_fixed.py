@@ -4,7 +4,8 @@ import os
 HD2 = r"E:\TAML\_scratch\hd2"
 SPEC = [("cn_add.py", "CN_ADD"), ("cn_desc.py", "CN_DESC"), ("cn_fix.py", "CN_FIX"),
         ("cn_mods.py", "CN_MODS"), ("cn_mods2.py", "CN_MODS2"), ("cn_new.py", "CN_NEW"),
-        ("cn_strings.py", "CN")]
+        ("cn_strings.py", "CN"),
+        ("cn_ui3.py", "CN_UI3")]
 
 CN = {}
 for f, key in SPEC:
