@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """hd2_patch.py -- Helldivers 2 .patch_N (Stingray bundle patch) 读写工具
 

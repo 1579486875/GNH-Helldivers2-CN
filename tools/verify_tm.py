@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """verify_tm.py -- 安全校验：pack B 只改上屏文本，不得改动任何「比较用」字符串。"""
 import sys, os, re, difflib
 sys.path.insert(0, r"E:\TAML\_scratch\hd2")

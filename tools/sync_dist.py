@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """sync_dist.py -- 把 Arsenal 里构建好的两个包重新打成分发 zip，同步到所有分发位置。"""
 import os, zipfile, hashlib, sys
 

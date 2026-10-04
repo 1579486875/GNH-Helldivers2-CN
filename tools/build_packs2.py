@@ -20,245 +20,75 @@ import glob as _glob
 _tm = sorted(_glob.glob(os.path.join(MODS, "HD2 Transmog*", "Addon", "9ba626afa44a3aa3.patch_0")),
              key=os.path.getmtime)
 TM_PATCH = _tm[-1] if _tm else os.path.join(MODS, "HD2 Transmog (Foundation) 16633 0.1.5 2026-09-28T20-24Z 8MtblTk5q_AR931809", "Addon", "9ba626afa44a3aa3.patch_0")
-buf = io.StringIO(); W = lambda *a: print(*a, file=buf)
+buf = io.StringIO()
+
+
+def W(*a):
+    """同一条信息同时写进构建日志和屏幕，出问题时不必去翻日志文件。"""
+    line = " ".join(str(x) for x in a)
+    print(line)
+    print(line, file=buf)
+
+
+def entry_id_ok(e):
+    """校验 entry 的资源 id 是否真的等于其路径的 murmur 哈希。
+
+    路径来自 Lua 开头的 -- HD2-Addon: 注释行（这是工具链的约定）。
+    万一将来漏写这行，这里返回一句提示而不是让整个构建崩掉。
+    """
+    if not e.path_comment:
+        return "?（缺 -- HD2-Addon: 注释）"
+    return murmur64a(e.path_comment.encode()) == e.res_id
 
 def lua_str(s):
-    return "'" + s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n") + "'"
+    """把一段普通文本变成安全的 Lua 单引号字符串字面量（转义反斜杠、单引号、回车、换行）。"""
+    return ("'" + s.replace("\\", "\\\\").replace("'", "\\'")
+            .replace("\r", "\\r").replace("\n", "\\n") + "'")
+
+TEMPLATE_LUA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lua_src", "runtime_template.lua")
+
 
 def build_runtime_lua():
-    L = []
-    L += ["-- HD2-Addon: mods/gnh_cn/zh_hans",
-          "-- GNH 简体中文汉化包 —— 零冲突实现：只提供本模组自己的资源，",
-          "-- 不覆盖任何其他模组的文件；用运行时接管的方式把 ModOptionsMenu 里的英文界面文本换成中文。",
-          "-- 制作：大赢经直插白皮赢道 (GNH-CN-CYS)", ""]
-    L += ["local GNH_CN = {"]
-    _seen = set()
+    """把中文词表填进 Lua 模板，得到最终要打进 patch 的那份 Lua。
+
+    分工：
+      * lua_src/runtime_template.lua —— 真正干活的代码，带完整中文注释，可单独用 Lua 语法工具检查；
+      * cn_strings.py               —— 英文→中文词表（由 merge_cn_fixed.py 从各 cn_*.py 合并而来）。
+    本函数只做一件事：把词表生成成 Lua 表字面量，替换掉模板里的 --[[GNH_CN_TABLE]] 占位符。
+
+    另外会自动补一份**全大写**的键：菜单显示"选项值"和"模组名"时会先把文字转成大写，
+    没有大写键就匹配不上（例如 Show Badge 是选项名不用转，而 GUARD DOGS 是选项值要转）。
+    """
+    lines, seen = [], set()
     for en, zh in CN.items():
-        if en in _seen: continue
-        _seen.add(en)
-        L.append("    [%s] = %s," % (lua_str(en), lua_str(zh)))
-        # ModOptionsMenu 会把模组名与选项值经 T.upper() 转成大写后再显示，
-        # 因此额外写入一份全大写键：运行时直接命中、零额外开销。
-        _up = en.upper()
-        if _up != en and _up not in _seen and _up not in CN:
-            _seen.add(_up)
-            L.append("    [%s] = %s," % (lua_str(_up), lua_str(zh)))
-    L += ["}", "",
-          "local GNH_TAG = 'GNH-CN-PACK'",
-          "local log_file",
-          "do",
-          "    local loader = rawget(_G, 'CowboyBingusModLoader')",
-          "    if loader and type(loader.open_log) == 'function' then",
-          "        local ok, f = pcall(loader.open_log, 'GNHChinesePack.log')",
-          "        if ok then log_file = f end",
-          "    end",
-          "end",
-          "local function log(msg)",
-          "    pcall(print, '[' .. GNH_TAG .. '] ' .. msg)",
-          "    if log_file then pcall(function() log_file:write(msg .. '\\n'); log_file:flush() end) end",
-          "end", "",
-          "-- 只做浅拷贝再翻译：绝不改动调用方传入的表（对方可能是只读表或共用表）",
-          "local function translate_spec(spec)",
-          "    if type(spec) ~= 'table' then return spec end",
-          "    local out = {}",
-          "    for k, v in pairs(spec) do out[k] = v end",
-          "    if out.label == nil then return spec end",
-          "    if type(out.label) == 'string' then out.label = GNH_CN[out.label] or out.label end",
-          "    if type(out.description) == 'string' then out.description = GNH_CN[out.description] or out.description end",
-          "    if type(out.mod) == 'string' then out.mod = GNH_CN[out.mod] or out.mod end",
-          "    local choices = out.choices",
-          "    if type(choices) == 'table' then",
-          "        local replaced = {}",
-          "        for i = 1, #choices do",
-          "            local c = choices[i]",
-          "            replaced[i] = (type(c) == 'string' and GNH_CN[c]) or c",
-          "        end",
-          "        out.choices = replaced",
-          "    end",
-          "    return out",
-          "end", "",
-          "local hooked, hits = false, 0",
-          "local real_register = nil",
-          "local getupvalue = type(debug) == 'table' and debug.getupvalue or nil",
-          "local function table_count(t)",
-          "    local n = 0",
-          "    for _ in pairs(t) do n = n + 1 end",
-          "    return n",
-          "end",
-          "local GNH_COUNT = table_count(GNH_CN)",
-          "local function tr(s)",
-          "    if type(s) ~= 'string' then return nil end",
-          "    return GNH_CN[s]",
-          "end", "",
-          "-- 在若干候选函数里找「含 options/mods 两张表」的那个 upvalue：就是 ModOptionsMenu 的内部 state。",
-          "-- ModOptionsMenu 自己用 debug.getinfo 定位调用方，所以 debug 库必然可用；",
-          "-- 万一取不到，只是补翻失效，实时接管仍然照常工作。",
-          "local function find_state(probes, count, field_a, field_b)",
-          "    if not getupvalue then return nil end",
-          "    for i = 1, count do",
-          "        local f = probes[i]",
-          "        if type(f) == 'function' then",
-          "            local k = 1",
-          "            while k <= 96 do",
-          "                local ok, name, v = pcall(getupvalue, f, k)",
-          "                if not ok or name == nil then break end",
-          "                if type(v) == 'table' and type(v[field_a]) == 'table' and type(v[field_b]) == 'table' then return v end",
-          "                k = k + 1",
-          "            end",
-          "        end",
-          "    end",
-          "    return nil",
-          "end",
-          "local function options_state(host)",
-          "    local p, n = {}, 0",
-          "    local function add(f) if type(f) == 'function' then n = n + 1; p[n] = f end end",
-          "    add(real_register) add(host.register_option) add(host.get) add(host.set)",
-          "    add(host.ready) add(host.on_change)",
-          "    return find_state(p, n, 'options', 'mods')",
-          "end", "",
-          "-- 补翻：把「已经注册进来」的选项显示文本就地改成中文。",
-          "-- 依据 ModOptionsMenu 内部实现：state.options[id] 存 label / description / choices，",
-          "-- choice 的值是 1 基下标（state.values[id]），与显示文本无关，所以改写 choices 绝对安全；",
-          "-- 行文本每帧经 shows_text(row + ROW_TEXT, option.label) 校验，改完下一帧自动重绘。",
-          "local function sweep_options()",
-          "    local host = rawget(_G, 'ModOptionsMenu')",
-          "    if type(host) ~= 'table' then return 0 end",
-          "    local st = options_state(host)",
-          "    if not st then return 0 end",
-          "    local n = 0",
-          "    for _, option in pairs(st.options) do",
-          "        if type(option) == 'table' then",
-          "            local t = tr(option.label)",
-          "            if t then option.label = t; n = n + 1 end",
-          "            t = tr(option.description)",
-          "            if t then option.description = t; n = n + 1 end",
-          "            local ch = option.choices",
-          "            if type(ch) == 'table' then",
-          "                for i = 1, #ch do",
-          "                    local c = tr(ch[i])",
-          "                    if c then ch[i] = c; n = n + 1 end",
-          "                end",
-          "            end",
-          "        end",
-          "    end",
-          "    for _, mod in pairs(st.mods) do",
-          "        if type(mod) == 'table' then",
-          "            local t = tr(mod.title)",
-          "            if t then mod.title = t; n = n + 1 end",
-          "        end",
-          "    end",
-          "    local view = st.view",
-          "    if type(view) == 'table' and type(view.mods) == 'table' then",
-          "        for _, mod in ipairs(view.mods) do",
-          "            if type(mod) == 'table' then",
-          "                local t = tr(mod.title)",
-          "                if t then mod.title = t; n = n + 1 end",
-          "            end",
-          "        end",
-          "    end",
-          "    if n > 0 and type(st.revision) == 'number' then st.revision = st.revision + 1 end",
-          "    return n",
-          "end", "",
-          "-- 按按键绑定菜单（Mod Bindings Menu，同一作者的另一套菜单）同样处理：",
-          "-- 它的 register_binding(id, label, slot, options) 第 2 个参数就是显示文本。",
-          "local bindings_hooked, real_binding_register = false, nil",
-          "local function translate_label(v)",
-          "    if type(v) ~= 'string' then return v end",
-          "    return GNH_CN[v] or v",
-          "end",
-          "local function try_hook_bindings()",
-          "    if bindings_hooked then return true end",
-          "    local host = rawget(_G, 'ModBindingsMenu')",
-          "    if type(host) ~= 'table' or type(host.register_binding) ~= 'function' then return false end",
-          "    local real = host.register_binding",
-          "    real_binding_register = real",
-          "    host.register_binding = function(id, label, slot, options)",
-          "        local ok, text = pcall(translate_label, label)",
-          "        if not ok then text = label end",
-          "        return real(id, text, slot, options)",
-          "    end",
-          "    bindings_hooked = true",
-          "    log('已接管 ModBindingsMenu.register_binding')",
-          "    return true",
-          "end",
-          "local function sweep_bindings()",
-          "    local host = rawget(_G, 'ModBindingsMenu')",
-          "    if type(host) ~= 'table' then return 0 end",
-          "    local p, np = {}, 0",
-          "    local function add(f) if type(f) == 'function' then np = np + 1; p[np] = f end end",
-          "    add(real_binding_register) add(host.register_binding) add(host.is_down) add(host.ready)",
-          "    local st = find_state(p, np, 'registry', 'order')",
-          "    if not st then return 0 end",
-          "    local n = 0",
-          "    for _, record in pairs(st.registry) do",
-          "        if type(record) == 'table' then",
-          "            local t = tr(record.text)",
-          "            if t then record.text = t; n = n + 1 end",
-          "            t = tr(record.label)",
-          "            if t then record.label = t end",
-          "            t = tr(record.category)",
-          "            if t then record.category = t; n = n + 1 end",
-          "        end",
-          "    end",
-          "    return n",
-          "end", "",
-          "local function try_hook()",
-          "    if hooked then return true end",
-          "    local host = rawget(_G, 'ModOptionsMenu')",
-          "    if type(host) ~= 'table' or type(host.register_option) ~= 'function' then return false end",
-          "    local real = host.register_option",
-          "    real_register = real",
-          "    host.register_option = function(id, spec)",
-          "        local ok, translated = pcall(translate_spec, spec)",
-          "        if not ok or type(translated) ~= 'table' then translated = spec end",
-          "        hits = hits + 1",
-          "        if hits <= 12 and translated ~= spec then",
-          "            log('汉化: ' .. tostring(spec.label) .. ' -> ' .. tostring(translated.label))",
-          "        end",
-          "        return real(id, translated)",
-          "    end",
-          "    hooked = true",
-          "    log('已接管 ModOptionsMenu.register_option（词表 ' .. tostring(GNH_COUNT) .. ' 条）')",
-          "    return true",
-          "end", "",
-          "local sweep_calls, sweep_idle = 0, 0",
-          "local function sweep_tick()",
-          "    if sweep_idle >= 3 then return end",
-          "    sweep_calls = sweep_calls + 1",
-          "    local ok, n = pcall(sweep_options)",
-          "    if not ok or type(n) ~= 'number' then n = 0 end",
-          "    local b = 0",
-          "    pcall(function() b = sweep_bindings() or 0 end)",
-          "    if n > 0 or b > 0 then",
-          "        sweep_idle = 0",
-          "        log('补翻已注册条目 ' .. n .. ' 项 / 按键 ' .. b .. ' 条（第 ' .. sweep_calls .. ' 次扫描）')",
-          "    else",
-          "        sweep_idle = sweep_idle + 1",
-          "        if sweep_calls == 1 then log('首次扫描：暂无可补翻条目（表内已有 ' .. tostring(n) .. ' 项命中）') end",
-          "    end",
-          "end", "",
-          "if rawget(_G, 'GNH_CN_PACK_LOADED') then log('重复加载，本次跳过'); return end",
-          "rawset(_G, 'GNH_CN_PACK_LOADED', true)", "",
-          "-- 1) 若 ModOptionsMenu 已经就绪，立刻接管；否则接管主循环，在它出现的第一帧抢先接管。",
-          "-- 2) 各模组的 Lua 由共享加载器按自己的顺序执行，比我们早注册的选项不会被上面的包装函数",
-          "--    看到，所以接管后还要遍历一遍已注册表就地补翻；再留几次定时复查兜底。",
-          "if try_hook() then",
-          "    log('ModOptionsMenu 已就绪，直接接管完成')",
-          "end",
-          "pcall(try_hook_bindings)",
-          "if hooked then pcall(sweep_tick) end", "",
-          "local base_update = rawget(_G, 'update')",
-          "local frame = 0",
-          "rawset(_G, 'update', function(...)",
-          "    frame = frame + 1",
-          "    if not hooked then",
-          "        if try_hook() then log('ModOptionsMenu 就绪，已在第 ' .. frame .. ' 帧接管') end",
-          "    end",
-          "    if not bindings_hooked then pcall(try_hook_bindings) end",
-          "    if hooked and sweep_idle < 3 and frame % 20 == 0 then pcall(sweep_tick) end",
-          "    if type(base_update) == 'function' then return base_update(...) end",
-          "end)"]
-    return "\n".join(L) + "\n"
+        if en in seen:
+            continue
+        seen.add(en)
+        lines.append("    [%s] = %s," % (lua_str(en), lua_str(zh)))
+        up = en.upper()
+        if up != en and up not in seen and up not in CN:
+            seen.add(up)
+            lines.append("    [%s] = %s," % (lua_str(up), lua_str(zh)))
+
+    with io.open(TEMPLATE_LUA, encoding="utf-8-sig") as fh:
+        tpl = fh.read()
+    if "--[[GNH_CN_TABLE]]" not in tpl:
+        raise RuntimeError("模板 %s 里找不到词表占位符 --[[GNH_CN_TABLE]]" % TEMPLATE_LUA)
+    text = tpl.replace("--[[GNH_CN_TABLE]]", "\n".join(lines))
+
+    # 生成后立刻做一次语法自检：能编译才允许继续，防止把坏文件打进 patch。
+    # （游戏用的是 LuaJIT，这里用 lupa 内置的 Lua 编译；两者语法在本文用到的范围内一致。）
+    try:
+        import lupa
+    except ImportError:
+        pass
+    else:
+        try:
+            lupa.LuaRuntime().compile(text)
+        except Exception as exc:
+            raise RuntimeError("生成的 Lua 编译失败，已中止构建：%s" % exc)
+    return text
+
 
 def build_transmog_lua():
     # 优先用模组库里的"当前版本"（更新后自动跟随）；备份仅作兜底
@@ -314,7 +144,9 @@ def build_transmog_lua():
         ("'Set the look'", "'设置外观'"),
         ("'D-pad / left stick: choose a look. A: select.'", "'方向键/左摇杆：选择一个外观。A：选定。'"),
         ("' saved'", "' 个已保存'"),
-        ("' owned choices'", "' 个可选'")]
+        ("' owned choices'", "' 个可选'"),
+        # —— 第四轮补齐：变体编辑器的空状态提示（纯赋值，不参与任何判定）——
+        ("'No variant selected'", "'未选择任何变体'")]
     n = 0
     for a, b in REPL:
         c = lua.count(a)
@@ -357,7 +189,7 @@ pfA = write_patch([("mods/gnh_cn/zh_hans", runtime), ("mods/gnh_cn/readme", read
 W("### 包 A：%s" % os.path.basename(PACK_A))
 W("  patch %d 字节, %d entry" % (len(pfA.raw), pfA.count))
 for e in pfA.entries:
-    W("    entry%d len=%-7d id匹配=%s %s" % (e.index, e.length, murmur64a(e.path_comment.encode()) == e.res_id, e.path_comment))
+    W("    entry%d len=%-7d id匹配=%s %s" % (e.index, e.length, entry_id_ok(e), e.path_comment))
 json.dump({"Version": 1, "Guid": str(uuid.uuid4()), "Name": "GNH 简体中文汉化包",
     "Description": ("把 ModOptionsMenu 与 Mod Bindings Menu 里未自带翻译键的模组界面文本换成简体中文："
                     "选项名、选项值、选项说明、模组名、按键名。词表 533 组（含大写形式共 1010 条），"
@@ -379,7 +211,7 @@ W("")
 W("### 包 B：%s" % os.path.basename(PACK_B))
 W("  patch %d 字节, %d entry（替换 %d 处）" % (len(pfB.raw), pfB.count, tmn))
 for e in pfB.entries:
-    W("    entry%d len=%-8d id匹配=%s %s" % (e.index, e.length, murmur64a(e.path_comment.encode()) == e.res_id, e.path_comment))
+    W("    entry%d len=%-8d id匹配=%s %s" % (e.index, e.length, entry_id_ok(e), e.path_comment))
 json.dump({"Version": 1, "Guid": str(uuid.uuid4()), "Name": "GNH Transmog 界面汉化（可选）",
     "Description": ("把 HD2 Transmog 的装甲变体界面换成简体中文。"
                     "\n\n⚠ 在模组管理器里可能会显示冲突，这是正常现象：本包通过覆盖 "

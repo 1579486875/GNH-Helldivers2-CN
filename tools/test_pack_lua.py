@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """test_pack_lua.py -- 用真实 Lua 运行环境验证包 A 的运行时接管 + 补翻逻辑。
 
 构造一个与 ModOptionsMenu 内部结构一致的替身（state.options / state.mods / revision），

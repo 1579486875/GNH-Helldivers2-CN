@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """cn_ui3.py -- 第三批词表：ModOptionsMenu / ModBindingsMenu 注册的界面文本。
 
 来源（逐字符取自各模组 Lua 源，见 _scratch/hd2/lua_dump/）：

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """cn_strings.py —— 英文原文 -> 简体中文 词表（Mod Options Menu 选项文本 / 模组名 / 选项说明）。
 
-合并自 cn_add / cn_desc / cn_fix / cn_mods / cn_mods2 / cn_new，共 533 条；
+合并自 cn_add / cn_desc / cn_fix / cn_mods / cn_mods2 / cn_new，共 541 条；
 键必须与模组注册时传入的字符串逐字符一致。
 """
 
@@ -539,4 +539,12 @@ CN = {
     'Custom Variant': '自订变体',
     'Shallow Water Diving': '浅水潜行',
     'Better Lobby Management': '大厅管理',
+    'No variant selected': '未选择任何变体',
+    '1  Resource ID': '1  资源 ID',
+    '2  Icon material': '2  图标材质',
+    '3  Texture binding': '3  贴图绑定',
+    '4  Configured icon': '4  已配置图标',
+    'Kick Test': '踢人测试',
+    'Promote Notice': '提升通知',
+    'Ship Station Hotkeys': '舰内站点快捷键',
 }
