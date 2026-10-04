@@ -17,7 +17,7 @@ $env:HD2_DATA = "D:\Steam\steamapps\common\Helldivers 2\data"
 | 脚本 | 用途 |
 | --- | --- |
 | `hd2_patch.py` | **核心库**：HD2 Stingray patch 文件的读写与校验（头部/entry 记录/资源 ID） |
-| `cn_strings.py` | 110 条英文 → 中文词表 |
+| `cn_strings.py` | 444 条英文 → 中文词表（由 `cn_add.py` / `cn_desc.py` / `cn_fix.py` / `cn_mods.py` 合并去重） |
 | `build_packs2.py` | **构建两个发布包**：零冲突主包 + Transmog 可选包（当前方案） |
 | `build_pack.py` | 早期版本：构建含 Transmog 覆盖副本的单包 |
 | `build_cn.py` | 早期版本：直接改写上游模组文件的汉化方案（已被独立包取代） |

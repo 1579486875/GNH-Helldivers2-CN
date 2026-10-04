@@ -34,7 +34,7 @@
 
 | 目标 | 位置 | 汉化内容 |
 | --- | --- | --- |
-| **MODS 选项目录**（ESC → 模组） | `Vanilla Plus Megapack …/options/ModOptionsMenu` 的 patch | 110 条界面文本：**Aggro Counter（仇恨计数）**、**Armored Overhaul（装甲大修）**、**Smarter Guard Dogs & Sentries（更聪明的护卫犬与哨戒炮）** 三个模组的全部选项名、说明与选项值 |
+| **MODS 选项目录**（ESC → 模组） | `Vanilla Plus Megapack …/options/ModOptionsMenu` 的 patch | **444 条**界面文本：覆盖当前启用的 20 个模组 —— 模组名、模组简介、全部选项名、选项值与选项说明 |
 | **装甲变体界面**（军械库 → 防具 → 自订变体） | `HD2 Transmog (Foundation)` 的 patch | 35 处界面文本：`CREATE VARIANT`、`Choose a look / base stats / passive`、`Back / Cancel / Create`、`LOOK / PASSIVE / BASE STATS`、`ARMOR RATING / SPEED / STAMINA REGEN`、`Not selected`、底部说明等 |
 
 **已汉化**（原本就是中文，未改动）：更好的大厅管理、浅水区飞扑、Mod 键位菜单、敌方模板预测、舰内站点快捷键 —— 这些模组自带 Bingus Text 翻译键，由整合包里的 `ChineseTranslation` 补丁翻译。
@@ -75,7 +75,7 @@ python tools\restore_hd2_cn.py
 - 每个 entry 的资源 ID = `murmur_hash_64A("mods/…路径")`，与内容无关 —— 所以**替换 Lua 内容不影响资源定位**，只要更新「文件总大小 / entry 长度 / 长度+8」三个字段即可。
 - 工具与脚本（可重复使用）：
   - `tools\hd2_patch.py` —— patch 读写、校验（自检覆盖全部 108 个 Lua entry，资源 ID 全部匹配）
-  - `tools\cn_strings.py` —— 110 条英文→中文词表
+  - `tools\cn_strings.py` —— 444 条英文→中文词表（合并自 `cn_add.py` / `cn_desc.py` / `cn_fix.py` / `cn_mods.py`）
   - `tools\apply_cn_menu.py` / `apply_cn_transmog.py` —— 一键重新应用汉化（**幂等保护**，已应用过会拒绝重复执行）
 - 每一步都用 `luaparser` 做了 **Lua 语法校验**（改前、改后各一次），并用 `hd2_patch.PatchFile` 复核了 patch 结构。
 
@@ -280,7 +280,7 @@ end
 %LOCALAPPDATA%\hd2arsenal\mods\GNH-Chinese-Simplified-Pack\
 ├── manifest.json                      Arsenal 识别用（名称/GUID/说明/选项）
 └── Addon\9ba626afa44a3aa3.patch_0     单个 patch，内含 3 个资源
-    ├── mods/gnh_cn/zh_hans            运行时接管 Lua（110 条词表 + 两道保险）
+    ├── mods/gnh_cn/zh_hans            运行时接管 Lua（444 条词表 + 两道保险）
     ├── mods/hd2transmog/foundation    Transmog 的汉化副本（覆盖式）
     └── mods/gnh_cn/readme             说明文本
 ```
@@ -356,7 +356,7 @@ end
 
 Arsenal 的冲突检测比的是「两个模组是否提供同一个游戏资源」。主包提供的两个资源路径是本模组**独有**的：
 
-- `mods/gnh_cn/zh_hans`（运行时接管代码 + 110 条词表）
+- `mods/gnh_cn/zh_hans`（运行时接管代码 + 444 条词表）
 - `mods/gnh_cn/readme`
 
 用资源 ID 校验过：这两个 ID 在模组库里**只有本模组提供**。汉化通过**运行时接管** `ModOptionsMenu.register_option` 实现，不触碰任何其他模组的文件。
@@ -410,7 +410,7 @@ Arsenal 会把每个模组的文件清单缓存进 `mod_headers` 表。旧版缓
 | --- | --- | --- |
 | **编译** | Lua 编译（真实 Lua 运行时） | 两个包共 3 个 entry **全部编译成功** |
 | **XML** | patch 容器格式 | 头部字段自洽、每条 entry 的记录偏移/长度校验、**资源 ID 全部匹配** |
-| **翻译** | 词表完整性 | 110 条，无空键/空值/占位符；**全部就位**于主包 Lua |
+| **翻译** | 词表完整性 | 444 条，无空键/空值/占位符；**全部就位**于主包 Lua（Lua 编译校验通过） |
 | **Def 引用** | 资源 ID ↔ 路径映射 | ID 与 murmur64(路径) 一一对应；两包资源**互不重叠**；**主包在模组库内提供者数 = 1（零冲突）** |
 | **构建配置** | manifest.json | JSON 合法、Guid/Version/Options 齐全、Include 目录存在 |
 | **代码与注释** | Lua 代码与注释一致性 | 4 项声明逐条核对通过：浅拷贝 ✓ 每帧轮询 ✓ 幂等标记 ✓ 不直接改调用方的表 ✓ |
@@ -448,3 +448,28 @@ zip 位置：
 发布包中**不含**任何上游模组的文件副本（主包只提供 `mods/gnh_cn/*` 两个全新资源路径）；
 用户需自行安装 [HD2 Arsenal](https://www.nexusmods.com/helldivers2) 与相应上游模组（Vanilla Plus Megapack、HD2 Transmog 等）。
 若选择启用 `dist/GNH-Transmog界面汉化-可选包.zip`，它会覆盖 `mods/hd2transmog/foundation` —— 这是该可选包的预期行为。
+
+---
+
+## 更新日志
+
+### 2026-10-04　词表从 110 条扩展到 444 条
+
+原先只覆盖 Aggro Counter、Armored Overhaul、Smarter Guard Dogs & Sentries 三个模组的选项文本。
+本次把**当前启用的全部 20 个模组**纳入汉化：
+
+| 范围 | 说明 |
+| --- | --- |
+| 游戏内「模组选项菜单」 | 选项名、选项值、选项说明 —— 由主包运行时接管替换 |
+| HD2 Arsenal 管理器界面 | 模组名称、模组简介、选项名与说明 —— 写入各模组 `manifest.json`（不改动上游逻辑，仅本地化文本） |
+| 新增模组 | HD2 HUD+、Better Map Markers、Enhanced Sentries Revamped、Menacing Heavy Weapons、Muzzle Flash Smoke Remover、Concept Mech |
+
+**词表构成**：`cn_add.py`（选项名/值 261 条）、`cn_desc.py`（选项说明 105 条）、`cn_fix.py`（补漏 29 条）、
+`cn_mods.py`（模组名 20 条），合并去重后共 **444 条**（`tools/cn_strings.py`）。
+
+**未翻译项（刻意保留原文）**：武器/载具型号（`Flak36`、`Gau-19`、`M61`、`BAR`、`MG42`、`PKM`、`FRV` 等）、
+护甲代号（`A9`、`DP8`、`RS67`）、模组专名（`Castle ODST`、`HD2 HUD+`）与梗名（`Meet The Medic`）。
+
+**校验**：主包 Lua 经真实 Lua 运行时 `load()` 编译通过；词表 444 条全部就位于包内；
+20 个模组的 manifest 文本仅剩上述刻意保留项。
+
