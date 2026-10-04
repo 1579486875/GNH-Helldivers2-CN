@@ -34,7 +34,7 @@
 
 | 目标 | 位置 | 汉化内容 |
 | --- | --- | --- |
-| **MODS 选项目录**（ESC → 模组） | 运行时接管 `ModOptionsMenu`（主包资源 `mods/gnh_cn/zh_hans`） | **541 组词表（含大写形式共 1026 条）**：选项名、选项值、选项说明、模组名 —— 覆盖 Aggro Counter 仇恨计数、Armored Overhaul 装甲大修、Smarter Guard Dogs & Sentries 更聪明的护卫犬与哨戒炮、Objective Tracker 任务目标追踪、HD2 Transmog 幻化、Better Lobby Management 大厅管理等 |
+| **MODS 选项目录**（ESC → 模组） | 运行时接管 `ModOptionsMenu`（主包资源 `mods/gnh_cn/zh_hans`） | **565 组词表（含大写形式共 1074 条）**：选项名、选项值、选项说明、模组名 —— 覆盖 Aggro Counter 仇恨计数、Armored Overhaul 装甲大修、Smarter Guard Dogs & Sentries 更聪明的护卫犬与哨戒炮、Objective Tracker 任务目标追踪、HD2 Transmog 幻化、Better Lobby Management 大厅管理等 |
 | **装甲变体界面**（军械库 → 防具 → 自订变体） | `HD2 Transmog (Foundation)` 的 patch | 35 处界面文本：`CREATE VARIANT`、`Choose a look / base stats / passive`、`Back / Cancel / Create`、`LOOK / PASSIVE / BASE STATS`、`ARMOR RATING / SPEED / STAMINA REGEN`、`Not selected`、底部说明等 |
 
 **已汉化**（原本就是中文，未改动）：更好的大厅管理、浅水区飞扑、Mod 键位菜单、敌方模板预测、舰内站点快捷键 —— 这些模组自带 Bingus Text 翻译键，由整合包里的 `ChineseTranslation` 补丁翻译。
@@ -75,8 +75,8 @@ python tools\restore_hd2_cn.py
 - 每个 entry 的资源 ID = `murmur_hash_64A("mods/…路径")`，与内容无关 —— 所以**替换 Lua 内容不影响资源定位**，只要更新「文件总大小 / entry 长度 / 长度+8」三个字段即可。
 - 工具与脚本（可重复使用）：
   - `tools\hd2_patch.py` —— patch 读写、校验（自检覆盖全部 108 个 Lua entry，资源 ID 全部匹配）
-  - `tools\cn_strings.py` —— 541 组英文→中文词表（合并自 `cn_add.py` / `cn_desc.py` / `cn_fix.py` /
-    `cn_mods.py` / `cn_mods2.py` / `cn_new.py` / `cn_ui3.py`）；运行时还会自动补一份全大写键，共 1026 条
+  - `tools\cn_strings.py` —— 565 组英文→中文词表（合并自 `cn_add.py` / `cn_desc.py` / `cn_fix.py` /
+    `cn_mods.py` / `cn_mods2.py` / `cn_new.py` / `cn_ui3.py`）；运行时还会自动补一份全大写键，共 1074 条
   - `tools\apply_cn_menu.py` / `apply_cn_transmog.py` —— 一键重新应用汉化（**幂等保护**，已应用过会拒绝重复执行）
 - 每一步都用 `luaparser` 做了 **Lua 语法校验**（改前、改后各一次），并用 `hd2_patch.PatchFile` 复核了 patch 结构。
 
@@ -529,7 +529,7 @@ zip 位置：
 4. **兜底不写坏东西**：`debug` 取不到 `state` 时补翻静默失效（只写一条日志），实时接管照常工作；
    所有补翻都在 `pcall` 里执行，绝不因为补翻出错而影响菜单本身。
 
-### 四、词表补充（473 → 541 组，含大写形式 1026 条）
+### 四、词表补充（473 → 565 组，含大写形式 1026 条）
 
 新增 `tools/cn_ui3.py`，60 组词条**逐字符取自各模组的 Lua 源**（源文件已 dump 到 `tools/` 之外的 `lua_dump/` 便于复核）：
 
@@ -650,7 +650,7 @@ zip 位置：
 
 ### 五、词表审计
 
-用 `tools/audit_cn.py` 把 541 组词表整体过了一遍：
+用 `tools/audit_cn.py` 把 565 组词表整体过了一遍：
 
 | 检查项 | 结果 |
 | --- | --- |
@@ -662,9 +662,9 @@ zip 位置：
 
 ### 六、覆盖率
 
-`tools/scan_ui2.py`（改进版，能正确处理 `..` 跨行拼接）扫描 206 个 Lua entry：
+`tools/scan_ui2.py`（改进版，能正确处理 `..` 跨行拼接）扫描 207 个 Lua entry：
 
-- 识别出界面文本 **194 条**，词表已覆盖 **181 条（93.3%）**
+- 识别出界面文本 **244 条**，词表已覆盖 **231 条（94.7%）**
 - 剩余 13 条全部是**刻意保留**：测试版专用文本（作者标注 "Test build only"）、
   ModOptionsMenu 源码注释里的 API 示例（`Row text`、`Mod name`、`My Mod`）、
   开发者调试探针标识（`Probe A` / `Probe B`）
@@ -700,7 +700,28 @@ zip 位置：
 | --- | --- |
 | 主包 / 可选包 Lua 结构 | 资源 ID 与路径哈希全部匹配、容器可完整重建 |
 | 四处副本一致性 | 构建目录 = Arsenal 启用目录 = 游戏 data = 分发 zip（sha1 全同） |
-| 词表 | 541 组 / 含大写 1026 条；覆盖率 181/194 |
+| 词表 | 565 组 / 含大写 1026 条；覆盖率 181/194 |
 | 极端场景 | 25/25 通过 |
 | 兼容性检查 | 全部通过（0 项失败） |
 | 性能 | 初始化后每帧 0.000047 ms（60fps 下 0.0003%） |
+
+### 十、2026-10-05 新增模组的汉化（词表 541 → 565 组）
+
+用户新装三个模组，逐一处理：
+
+| 模组 | 情况 | 处理 |
+| --- | --- | --- |
+| **High Alert（高度警戒）** | 作者原本就做了中文：名称、简介、59 个菜单字段**全部是中英并排**（如 `轻重分色 / Split Colors`） | **无需改动**。这是作者的设计，刻意不覆盖，以免与它自己的更新打架 |
+| **Markers For MineField（雷区标记）** | 全英文 | 名称、简介、8 个启用选项及其说明全部汉化；`Include`（目录名）保持原样不动 |
+| **Beacon Custom VFX（信标自定义特效）** | 全英文 | 名称、简介、6 个启用选项全部汉化；同上 |
+
+同时把 Arsenal 的**两处显示来源**一并同步（名称与简介在「配置」页和「模组库」页来自不同文件）：
+
+- `hd2a_data.json` —— 「配置」页的名称 / 简介 / 启用选项（导入时的快照）
+- `mod_headers.db` —— 「模组库」页的 label
+
+顺带修好一处历史遗漏：`HD2 C4 Quick Actions 1.13` 在「配置」页仍是英文，现已改为 `HD2 C4 快捷操作 1.13`。
+
+另外说明一点：`Markers For Minefield` 与 `Beacon Custom VFX` 的 patch 文件用的是**另一种容器布局**
+（头部 0x20 字段记录的是完整 bundle 大小，不是 patch 自身大小），我们的读写库会拒绝解析这类文件 ——
+这正是我们要的行为：**解析不了就碰都不碰**，所以构建脚本永远不会误删或改写它们。

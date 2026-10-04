@@ -192,7 +192,7 @@ for e in pfA.entries:
     W("    entry%d len=%-7d id匹配=%s %s" % (e.index, e.length, entry_id_ok(e), e.path_comment))
 json.dump({"Version": 1, "Guid": str(uuid.uuid4()), "Name": "GNH 简体中文汉化包",
     "Description": ("把 ModOptionsMenu 与 Mod Bindings Menu 里未自带翻译键的模组界面文本换成简体中文："
-                    "选项名、选项值、选项说明、模组名、按键名。词表 533 组（含大写形式共 1010 条），"
+                    "选项名、选项值、选项说明、模组名、按键名。词表 565 组（含大写形式共 1074 条），"
                     "覆盖 Aggro Counter 仇恨计数、Armored Overhaul 装甲大修、"
                     "Smarter Guard Dogs & Sentries 更聪明的护卫犬与哨戒炮、Objective Tracker 任务目标追踪、"
                     "HD2 Transmog 幻化、Better Lobby Management 大厅管理等。"
