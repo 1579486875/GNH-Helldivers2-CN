@@ -1,0 +1,164 @@
+﻿# -*- coding: utf-8 -*-
+"""make_readme4.py -- 生成 2026-10-05 版使用说明（新的模组名 + 三个新模组）。"""
+import json, os, re, sqlite3
+
+OUT = r"E:\TAML\HD2模组打包-2026-10-05"
+D = os.path.join(os.environ["LOCALAPPDATA"], "hd2arsenal")
+LIST = {r[0]: (r[1], r[2]) for r in json.load(open(os.path.join(OUT, "_打包清单.json"), encoding="utf-8"))}
+
+def human(n):
+    for u in ("B", "KB", "MB", "GB"):
+        if n < 1024 or u == "GB":
+            return "%.1f %s" % (n, u)
+        n /= 1024.0
+
+def first_sentence(s, n=76):
+    s = (s or "").replace("\n", " ").strip()
+    for sep in ("。", ". ", "！", "；"):
+        i = s.find(sep)
+        if 0 < i < n:
+            return s[:i + len(sep)]
+    return s[:n] + ("…" if len(s) > n else "")
+
+info = {}
+con = sqlite3.connect("file:%s?mode=ro" % os.path.join(D, "mod_headers.db").replace("\\", "/"), uri=True)
+for label, path in con.execute("SELECT label, path FROM mods").fetchall():
+    mp = os.path.join(path, "manifest.json")
+    desc = ""
+    if os.path.isfile(mp):
+        try:
+            desc = json.load(open(mp, encoding="utf-8")).get("Description") or ""
+        except Exception:
+            pass
+    info.setdefault(label, desc)
+con.close()
+st = json.load(open(os.path.join(D, "hd2a_data.json"), encoding="utf-8"))
+for m in st["modsList"]["default"]["mods"]:
+    if not info.get(m.get("label")):
+        info[m["label"]] = m.get("description") or ""
+
+GROUPS = [
+    ("一、必装前置（缺一不可）", ["Bingus 共享加载器 - v18", "HD2 Transmog 基础组件", "HD2 平滑启动"]),
+    ("二、界面与信息显示", ["HD2 抬头显示+", "目标追踪器", "仇恨计数 v1.3", "更好的地图标记",
+                     "机甲部位血量HUD v1.11.1", "发光补给图标 v4.2", "头盔头灯",
+                     "高度警戒 / High Alert", "雷区标记"]),
+    ("三、玩法增强", ["Vanilla Plus 合集 - v35", "装甲大修 3.0.1", "更聪明的护卫犬与哨戒炮 4.6.1",
+                 "强化哨戒炮重制版", "炮塔与无人机激光瞄准", "HD2 C4 快捷操作 1.13",
+                 "枪口硝烟移除 3.2.2", "GL-52 射击者排除 v0.1.2"]),
+    ("四、外观与音效", ["Castle 地狱伞兵", "ODST 独行者", "威压重型武器 - 1.7.4", "信标自定义特效"]),
+    ("五、汉化包（可选，但强烈推荐）", ["GNH 简体中文汉化包", "GNH Transmog 界面汉化（可选）"]),
+]
+PICK = {
+    "Bingus 共享加载器 - v18": "必勾，且要放在 Arsenal 列表【最后一位】",
+    "HD2 Transmog 基础组件": "必勾 —— 「GNH Transmog 界面汉化」依赖它",
+    "HD2 平滑启动": "必勾（配合 Bingus 加载器使用，加快启动）",
+    "HD2 抬头显示+": "勾「核心」+「HUD 布局」（推荐「一体化」），其余按喜好",
+    "目标追踪器": "勾上即可；面板位置、大小、显示哪些目标都能在游戏内「模组选项菜单」里调",
+    "仇恨计数 v1.3": "勾「仇恨计数」，位置推荐「罗盘左侧」",
+    "更好的地图标记": "四项都可保持默认；想更简洁就选「原版」风格",
+    "机甲部位血量HUD v1.11.1": "勾上即可（该模组自带中文）",
+    "发光补给图标 v4.2": "勾常用的箱子即可（弹药箱 / 兴奋剂箱 / 手雷箱）",
+    "头盔头灯": "勾「核心」；默认「作业灯」（20-25 米）够用",
+    "高度警戒 / High Alert": "作者自带中文界面；三组（普通 / 重型 / 炮火）共 29 项，滑块步进 0.1",
+    "雷区标记": "「简易标记」和「详细标记」二选一（同时开两个会互相打架），再选原版配色或自定义配色",
+    "Vanilla Plus 合集 - v35": "建议全勾；「中文翻译包」也一起勾",
+    "装甲大修 3.0.1": "按偏好选；不想影响原版手感就只勾「载具指示器」「坦克炮手视角」",
+    "更聪明的护卫犬与哨戒炮 4.6.1": "建议全勾（安全保护 + 目标优先级最实用）",
+    "强化哨戒炮重制版": "每种哨戒炮挑一个音效；没有的（如 BF1 迫击炮）建议只勾一个",
+    "炮塔与无人机激光瞄准": "挑一个颜色（红色更醒目）",
+    "HD2 C4 快捷操作 1.13": "需要配合「模组按键菜单 v2」自定义按键",
+    "枪口硝烟移除 3.2.2": "全勾即可",
+    "GL-52 射击者排除 v0.1.2": "仅支持特定游戏版本，版本不符时不会生效",
+    "Castle 地狱伞兵": "必选 Castle（网格）+ 贴图里挑一套（推荐「黑色 地狱伞兵」）",
+    "ODST 独行者": "勾 A9 + textures（想顺便改 DP-8 / RS-67 就再勾对应的）",
+    "威压重型武器 - 1.7.4": "想改哪把枪的音效就勾哪个，不勾的不影响",
+    "信标自定义特效": "蓝/红各选一个版本：Blue V1 / Blue V2（Rock and Stone）· Red V1 / Red V2（原版增强）",
+    "GNH 简体中文汉化包": "必勾 —— 游戏内「模组选项菜单」「按键绑定菜单」的中文靠它",
+    "GNH Transmog 界面汉化（可选）": "需要就给 Transmog 界面汉化；会提示 1 处覆盖，属正常",
+}
+L = []
+W = L.append
+W("=" * 66)
+W("  绝地潜兵 2 · 模组包")
+W("  %d 个模组 | 合计 %.0f MB | 打包于 2026-10-05" % (len(LIST), sum(v[1] for v in LIST.values()) / 1048576))
+W("=" * 66)
+W("")
+W("【快速开始 · 四步】")
+W("")
+W("  1) 装 Arsenal 模组管理器（HD2Arsenal）")
+W("  2) Arsenal → 模组管理 → 导入(Import) → 逐个选中本目录的 .zip")
+W("     （一个 zip = 一个模组，想装哪个导入哪个，不必全装）")
+W("  3) 在列表里把要用的模组打开开关；要选项的模组点右侧齿轮按需勾选")
+W("     ★ Bingus 共享加载器请排在列表【最后一位】")
+W("  4) 点 Deploy → 启动游戏")
+W("")
+W("【想游戏内也显示中文？】")
+W("")
+W("  额外导入「GNH 简体中文汉化包.zip」，启用即可 —— 游戏内 ESC → 模组")
+W("  选项菜单里的英文会被替换成中文。这一步和上面的模组包互相独立。")
+W("")
+W("-" * 66)
+for title, labels in GROUPS:
+    W("")
+    W("【%s】" % title)
+    W("")
+    for lab in labels:
+        if lab not in LIST:
+            continue
+        files, size = LIST[lab]
+        W("  ▪ %s" % lab)
+        W("      %s ｜ %s" % (human(size), files))
+        d = first_sentence(info.get(lab, ""))
+        if d:
+            W("      %s" % d)
+        if lab in PICK:
+            W("      ▸ 建议：%s" % PICK[lab])
+        W("")
+W("-" * 66)
+W("")
+W("【常见问题】")
+W("")
+W("  Q1 选项太多，不知道该选哪些？")
+W("     每个选项都是独立开关，互不冲突。按上面各条的「建议」选即可，")
+W("     或者干脆全勾 —— 都是作者给的额外内容，不会有副作用。")
+W("")
+W("  Q2 导入后 Arsenal 提示「冲突」？")
+W("     只有「GNH Transmog 界面汉化」会与「HD2 Transmog 基础组件」显示 1 处")
+W("     文件覆盖 —— 这正是它的汉化原理，属正常现象，可以放心用。")
+W("")
+W("  Q3 装完进游戏没反应？")
+W("     ① 确认「Bingus 共享加载器」已装、已启用，且在列表最后一位")
+W("     ② 确认在 Arsenal 里点过 Deploy")
+W("     ③ 完全重启游戏（不是只退到主菜单）")
+W("")
+W("  Q4 汉化没生效？")
+W("     模组包只负责各个模组本身；游戏内选项菜单的中文需要单独导入")
+W("     「GNH 简体中文汉化包」。两个都装才有完整中文体验。")
+W("")
+W("  Q5 Castle 地狱伞兵和 ODST 独行者会打架吗？")
+W("     不会。前者替换 CPG-48「工兵」，后者替换 A-9「地狱伞兵」/ DP-8 / RS-67，")
+W("     改的是完全不同的护甲，可以同时开。")
+W("")
+W("  Q6 雷区标记的两个标记能同时开吗？")
+W("     不建议。「简易标记」和「详细标记」会在地雷上方叠两层图标，作者也提示二选一。")
+W("")
+W("  Q7 可以只装一部分吗？")
+W("     可以。每个 zip 都是完整独立的模组。但请务必保留 Bingus 共享加载器，")
+W("     否则依赖它的模组（抬头显示+、地图标记、目标追踪器等）不会工作。")
+W("")
+W("-" * 66)
+W("")
+W("【说明】")
+W("")
+W("  · 每个 zip 都是【完整模组】，含该模组的全部选项文件")
+W("    （例如 Castle 地狱伞兵含 3 套迷彩，共 322 MB，压缩后 307 MB）")
+W("  · 个别包名沿用本地显示名，版本号可能滞后：")
+W("    「更聪明的护卫犬与哨戒炮 4.6.1」实为 4.6.3；")
+W("    「HD2 Transmog 基础组件」实为 0.2.1 实验版")
+W("  · 模组名里的型号代号（A9 / DP8 / RS67、Flak36 / Gau-19 / MG42 等）")
+W("    和作者系列名 Castle 保留原文；其余名称、简介、选项均为中文")
+W("  · 以上模组均为社区作者作品，建议到创意工坊 / Nexus 订阅支持原作者；")
+W("    本包只是本地存档转发，未修改任何作者署名")
+W("")
+open(os.path.join(OUT, "★ 使用说明.txt"), "w", encoding="utf-8").write("\r\n".join(L))
+print("使用说明已生成：%d 行 / %d 字节" % (len(L), len("\r\n".join(L).encode("utf-8"))))

@@ -152,7 +152,7 @@ CN_ADD = {
     'Gameplay-first flood, about 35-40 m.': '偏游戏性的泛光照明，约 35-40 米。',
 
     # ---------- HD2 Transmog Foundation ----------
-    'HD2 Transmog Foundation': 'HD2 Transmog Foundation',
+    'HD2 Transmog Foundation': 'HD2 Transmog 基础组件',
     'Independent armor stats (default)': '独立护甲属性（默认）',
     'Disable armor stat selection': '禁用护甲属性选择',
     'Choose look, base stats, then passive.': '依次选择外观、基础属性、被动。',
