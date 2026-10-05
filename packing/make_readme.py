@@ -1,5 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
-"""make_readme4.py -- 生成 2026-10-05 版使用说明（新的模组名 + 三个新模组）。"""
+"""make_readme5.py -- 2026-10-05 第二版说明（加入 C-Rig 骨骼运行时）。"""
 import json, os, re, sqlite3
 
 OUT = r"E:\TAML\HD2模组打包-2026-10-05"
@@ -21,24 +21,13 @@ def first_sentence(s, n=76):
     return s[:n] + ("…" if len(s) > n else "")
 
 info = {}
-con = sqlite3.connect("file:%s?mode=ro" % os.path.join(D, "mod_headers.db").replace("\\", "/"), uri=True)
-for label, path in con.execute("SELECT label, path FROM mods").fetchall():
-    mp = os.path.join(path, "manifest.json")
-    desc = ""
-    if os.path.isfile(mp):
-        try:
-            desc = json.load(open(mp, encoding="utf-8")).get("Description") or ""
-        except Exception:
-            pass
-    info.setdefault(label, desc)
-con.close()
 st = json.load(open(os.path.join(D, "hd2a_data.json"), encoding="utf-8"))
 for m in st["modsList"]["default"]["mods"]:
-    if not info.get(m.get("label")):
-        info[m["label"]] = m.get("description") or ""
+    info[m.get("label")] = m.get("description") or ""
 
 GROUPS = [
-    ("一、必装前置（缺一不可）", ["Bingus 共享加载器 - v18", "HD2 Transmog 基础组件", "HD2 平滑启动"]),
+    ("一、必装前置（缺一不可）", ["Bingus 共享加载器 - v18", "HD2 平滑启动",
+                          "C-Rig 骨骼运行时（共享加载器）", "HD2 Transmog 基础组件"]),
     ("二、界面与信息显示", ["HD2 抬头显示+", "目标追踪器", "仇恨计数 v1.3", "更好的地图标记",
                      "机甲部位血量HUD v1.11.1", "发光补给图标 v4.2", "头盔头灯",
                      "高度警戒 / High Alert", "雷区标记"]),
@@ -50,8 +39,9 @@ GROUPS = [
 ]
 PICK = {
     "Bingus 共享加载器 - v18": "必勾，且要放在 Arsenal 列表【最后一位】",
-    "HD2 Transmog 基础组件": "必勾 —— 「GNH Transmog 界面汉化」依赖它",
     "HD2 平滑启动": "必勾（配合 Bingus 加载器使用，加快启动）",
+    "C-Rig 骨骼运行时（共享加载器）": "必勾，且下面的「运行时」选项也要勾上（作者标注 MUST SELECT）—— 带骨骼物理的盔甲模组靠它工作",
+    "HD2 Transmog 基础组件": "必勾 —— 「GNH Transmog 界面汉化」依赖它",
     "HD2 抬头显示+": "勾「核心」+「HUD 布局」（推荐「一体化」），其余按喜好",
     "目标追踪器": "勾上即可；面板位置、大小、显示哪些目标都能在游戏内「模组选项菜单」里调",
     "仇恨计数 v1.3": "勾「仇恨计数」，位置推荐「罗盘左侧」",
@@ -128,8 +118,9 @@ W("     文件覆盖 —— 这正是它的汉化原理，属正常现象，可�
 W("")
 W("  Q3 装完进游戏没反应？")
 W("     ① 确认「Bingus 共享加载器」已装、已启用，且在列表最后一位")
-W("     ② 确认在 Arsenal 里点过 Deploy")
-W("     ③ 完全重启游戏（不是只退到主菜单）")
+W("     ② 确认「C-Rig 骨骼运行时」已装、已启用，选项「运行时」已勾选")
+W("     ③ 确认在 Arsenal 里点过 Deploy")
+W("     ④ 完全重启游戏（不是只退到主菜单）")
 W("")
 W("  Q4 汉化没生效？")
 W("     模组包只负责各个模组本身；游戏内选项菜单的中文需要单独导入")
@@ -142,23 +133,27 @@ W("")
 W("  Q6 雷区标记的两个标记能同时开吗？")
 W("     不建议。「简易标记」和「详细标记」会在地雷上方叠两层图标，作者也提示二选一。")
 W("")
-W("  Q7 可以只装一部分吗？")
-W("     可以。每个 zip 都是完整独立的模组。但请务必保留 Bingus 共享加载器，")
-W("     否则依赖它的模组（抬头显示+、地图标记、目标追踪器等）不会工作。")
+W("  Q7 目标追踪器的面板是英文的？")
+W("     是的，且改不了。这个面板用的是模组自带的字库（只有拉丁字形），")
+W("     汉字会渲染成「?」。游戏里同类自绘 HUD 都有这个限制，只有图标能用中文。")
+W("")
+W("  Q8 可以只装一部分吗？")
+W("     可以。每个 zip 都是完整独立的模组。但请务必保留 Bingus 共享加载器和")
+W("     C-Rig 骨骼运行时，否则依赖它们的模组不会工作。")
 W("")
 W("-" * 66)
 W("")
 W("【说明】")
 W("")
 W("  · 每个 zip 都是【完整模组】，含该模组的全部选项文件")
-W("    （例如 Castle 地狱伞兵含 3 套迷彩，共 322 MB，压缩后 307 MB）")
+W("    （例如 Castle 地狱伞兵含 3 套迷彩，共 322 MB）")
 W("  · 个别包名沿用本地显示名，版本号可能滞后：")
 W("    「更聪明的护卫犬与哨戒炮 4.6.1」实为 4.6.3；")
 W("    「HD2 Transmog 基础组件」实为 0.2.1 实验版")
 W("  · 模组名里的型号代号（A9 / DP8 / RS67、Flak36 / Gau-19 / MG42 等）")
-W("    和作者系列名 Castle 保留原文；其余名称、简介、选项均为中文")
+W("    和作者系列名 Castle、C-Rig 保留原文；其余名称、简介、选项均为中文")
 W("  · 以上模组均为社区作者作品，建议到创意工坊 / Nexus 订阅支持原作者；")
 W("    本包只是本地存档转发，未修改任何作者署名")
 W("")
 open(os.path.join(OUT, "★ 使用说明.txt"), "w", encoding="utf-8").write("\r\n".join(L))
-print("使用说明已生成：%d 行 / %d 字节" % (len(L), len("\r\n".join(L).encode("utf-8"))))
+print("使用说明已生成：%d 行" % len(L))
