@@ -7,7 +7,9 @@ import json, os, re, zipfile, time, shutil
 
 DATA = os.path.join(os.environ["LOCALAPPDATA"], "hd2arsenal", "hd2a_data.json")
 mods = json.load(open(DATA, encoding="utf-8"))["modsList"]["default"]["mods"]
-OUT = r"E:\TAML\HD2模组打包-2026-10-05"
+import datetime
+TODAY = datetime.date.today().strftime("%Y-%m-%d")
+OUT = r"E:\TAML\HD2-模组合集-GNH个人汉化-%s" % TODAY
 os.makedirs(OUT, exist_ok=True)
 
 def human(n):

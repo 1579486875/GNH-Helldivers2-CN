@@ -2,7 +2,9 @@
 """make_readme5.py -- 2026-10-05 第二版说明（加入 C-Rig 骨骼运行时）。"""
 import json, os, re, sqlite3
 
-OUT = r"E:\TAML\HD2模组打包-2026-10-05"
+import datetime
+TODAY = datetime.date.today().strftime("%Y-%m-%d")
+OUT = r"E:\TAML\HD2-模组合集-GNH个人汉化-%s" % TODAY
 D = os.path.join(os.environ["LOCALAPPDATA"], "hd2arsenal")
 LIST = {r[0]: (r[1], r[2]) for r in json.load(open(os.path.join(OUT, "_打包清单.json"), encoding="utf-8"))}
 
