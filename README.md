@@ -34,7 +34,7 @@
 
 | 目标 | 位置 | 汉化内容 |
 | --- | --- | --- |
-| **MODS 选项目录**（ESC → 模组） | 运行时接管 `ModOptionsMenu`（主包资源 `mods/gnh_cn/zh_hans`） | **565 组词表（含大写形式共 1074 条）**：选项名、选项值、选项说明、模组名 —— 覆盖 Aggro Counter 仇恨计数、Armored Overhaul 装甲大修、Smarter Guard Dogs & Sentries 更聪明的护卫犬与哨戒炮、Objective Tracker 任务目标追踪、HD2 Transmog 幻化、Better Lobby Management 大厅管理等 |
+| **MODS 选项目录**（ESC → 模组） | 运行时接管 `ModOptionsMenu`（主包资源 `mods/gnh_cn/zh_hans`） | **675 组词表（含大写形式共 1290 条）**：选项名、选项值、选项说明、模组名 —— 覆盖 Aggro Counter 仇恨计数、Armored Overhaul 装甲大修、Smarter Guard Dogs & Sentries 更聪明的护卫犬与哨戒炮、Objective Tracker 任务目标追踪、HD2 Transmog 幻化、Better Lobby Management 大厅管理等 |
 | **装甲变体界面**（军械库 → 防具 → 自订变体） | `HD2 Transmog (Foundation)` 的 patch | 35 处界面文本：`CREATE VARIANT`、`Choose a look / base stats / passive`、`Back / Cancel / Create`、`LOOK / PASSIVE / BASE STATS`、`ARMOR RATING / SPEED / STAMINA REGEN`、`Not selected`、底部说明等 |
 
 **已汉化**（原本就是中文，未改动）：更好的大厅管理、浅水区飞扑、Mod 键位菜单、敌方模板预测、舰内站点快捷键 —— 这些模组自带 Bingus Text 翻译键，由整合包里的 `ChineseTranslation` 补丁翻译。
@@ -75,8 +75,8 @@ python tools\restore_hd2_cn.py
 - 每个 entry 的资源 ID = `murmur_hash_64A("mods/…路径")`，与内容无关 —— 所以**替换 Lua 内容不影响资源定位**，只要更新「文件总大小 / entry 长度 / 长度+8」三个字段即可。
 - 工具与脚本（可重复使用）：
   - `tools\hd2_patch.py` —— patch 读写、校验（自检覆盖全部 108 个 Lua entry，资源 ID 全部匹配）
-  - `tools\cn_strings.py` —— 565 组英文→中文词表（合并自 `cn_add.py` / `cn_desc.py` / `cn_fix.py` /
-    `cn_mods.py` / `cn_mods2.py` / `cn_new.py` / `cn_ui3.py`）；运行时还会自动补一份全大写键，共 1074 条
+  - `tools\cn_strings.py` —— 675 组英文→中文词表（合并自 `cn_add.py` / `cn_desc.py` / `cn_fix.py` /
+    `cn_mods.py` / `cn_mods2.py` / `cn_new.py` / `cn_ui3.py`）；运行时还会自动补一份全大写键，共 1290 条
   - `tools\apply_cn_menu.py` / `apply_cn_transmog.py` —— 一键重新应用汉化（**幂等保护**，已应用过会拒绝重复执行）
 - 每一步都用 `luaparser` 做了 **Lua 语法校验**（改前、改后各一次），并用 `hd2_patch.PatchFile` 复核了 patch 结构。
 
@@ -529,7 +529,7 @@ zip 位置：
 4. **兜底不写坏东西**：`debug` 取不到 `state` 时补翻静默失效（只写一条日志），实时接管照常工作；
    所有补翻都在 `pcall` 里执行，绝不因为补翻出错而影响菜单本身。
 
-### 四、词表补充（473 → 565 组，含大写形式 1026 条）
+### 四、词表补充（473 → 675 组，含大写形式 1026 条）
 
 新增 `tools/cn_ui3.py`，60 组词条**逐字符取自各模组的 Lua 源**（源文件已 dump 到 `tools/` 之外的 `lua_dump/` 便于复核）：
 
@@ -650,7 +650,7 @@ zip 位置：
 
 ### 五、词表审计
 
-用 `tools/audit_cn.py` 把 565 组词表整体过了一遍：
+用 `tools/audit_cn.py` 把 675 组词表整体过了一遍：
 
 | 检查项 | 结果 |
 | --- | --- |
@@ -700,12 +700,12 @@ zip 位置：
 | --- | --- |
 | 主包 / 可选包 Lua 结构 | 资源 ID 与路径哈希全部匹配、容器可完整重建 |
 | 四处副本一致性 | 构建目录 = Arsenal 启用目录 = 游戏 data = 分发 zip（sha1 全同） |
-| 词表 | 565 组 / 含大写 1026 条；覆盖率 181/194 |
+| 词表 | 675 组 / 含大写 1026 条；覆盖率 181/194 |
 | 极端场景 | 25/25 通过 |
 | 兼容性检查 | 全部通过（0 项失败） |
 | 性能 | 初始化后每帧 0.000047 ms（60fps 下 0.0003%） |
 
-### 十、2026-10-05 新增模组的汉化（词表 541 → 565 组）
+### 十、2026-10-05 新增模组的汉化（词表 541 → 675 组）
 
 用户新装三个模组，逐一处理：
 
@@ -836,3 +836,44 @@ python packing/make_readme.py         # 重新生成使用说明
 | 其余 24 个模组 | 0 条 | 只有图标和数字，无需处理 |
 
 废弃的汉化包保留在 `_scratch/hd2/disabled-packs/GNH-ObjectiveTracker-CN-Addon` 供以后参考。
+
+---
+
+## 十四、2026-10-05 第二批模组更新（27 → 35 个）
+
+用户新加 8 个、更新 6 个模组，全部完成汉化。**词表 582 → 675 组。**
+
+### 新增模组
+
+| 模组 | 中文名 |
+| --- | --- |
+| EXO Stratagem Launcher | EXO 战略配备发射器 |
+| Run-N-Gun | 边跑边打 v1.0.4 |
+| Tactical Combat Overhaul | 战术战斗大修 v1.7.9 |
+| Ricochet Overhaul | 跳弹大修 v1.5.0 |
+| Extended Pickup Icons | 拾取图标范围扩展 |
+| Bullet stratagem weapons overhaul | 实弹战略配备武器大修 0.1.1 |
+| Super Cardio | 超级体能 |
+| BFV Kill Feedback | （作者自带中文，未改动） |
+
+### 更新模组（版本号已跟进）
+
+`Bingus 共享加载器 v19` · `Vanilla Plus 合集 v37` · `装甲大修 3.2.0` ·
+`仇恨计数 v1.4` · `HD2 C4 快捷操作 1.13.1` · `HD2 抬头显示+ 0.2.0`
+
+### 本轮顺手修掉的两个脚本问题
+
+1. **`build_packs2.py` 的模板路径写死了 Vanilla Plus V36 的目录名**，上游更新到 v37 后目录名变化，构建直接报错。
+   现在改为**扫描式查找**：`write_patch` 只借用模板的头部结构（前 `0xC8+80*(N-1)` 字节），
+   所以**任何合法 patch 都能当模板**，不再依赖某一版特定目录。Transmog 的基底路径同样早已是动态查找。
+2. **`cn_ui5.py` 里残留着"从模组源码动态生成词表"的代码**，而它依赖的模组目录名会随版本变化，
+   导致模组一更新就**连带整个词表合并流程失败**。已改为固定词表内容。
+
+> 教训：**打包工具链里不要出现任何"写死的上游路径或版本号"**。
+> 上游一更新，目录名、资源路径全都可能变，工具应当**扫描 + 容错 + 明确报错**，而不是硬编码。
+
+### Arsenal 显示名的同步
+
+新增了 `tools/sync_arsenal_from_manifest.py`：**以 manifest 为准覆盖** Arsenal 的 `label` / `description`。
+与原来的 `sync_arsenal_names.py`（只做"翻译"，已含中文的会跳过）不同 ——
+模组更新后版本号变了（v18 → v19），只翻译是更新不到版本号的，必须按 manifest 覆盖。

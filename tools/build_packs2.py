@@ -3,7 +3,7 @@
    A) GNH-Chinese-Simplified-Pack   —— 零冲突：只提供全新资源 mods/gnh_cn/*，运行时接管 ModOptionsMenu
    B) GNH-Transmog-CN-Addon         —— 可选：覆盖式汉化 Transmog 界面（与 HD2 Transmog 有覆盖关系）
 """
-import os, sys, io, json, uuid, shutil, hashlib, re
+import os, sys, io, json, uuid, shutil, hashlib, re, glob as _glob
 sys.path.insert(0, r"E:\TAML\_scratch\hd2")
 from cn_strings import CN
 from hd2_patch import PatchFile, murmur64a, p32, p64, align8
@@ -14,12 +14,31 @@ DATA = r"C:\SteamLibrary\steamapps\common\Helldivers 2\data"
 LOG = r"E:\TAML\_scratch\hd2\notes\build_packs2.txt"
 PACK_A = os.path.join(MODS, "GNH-Chinese-Simplified-Pack")
 PACK_B = os.path.join(MODS, "GNH-Transmog-CN-Addon")
-TEMPLATE = os.path.join(MODS, "Vanilla Plus Megapack Rows V36 zh-Hans zh-Hant CN 16627 36 2026-10-01T05-16Z UR0syXwpP_AR640294",
-                        "options", "ChineseTranslation", "9ba626afa44a3aa3.patch_0")
-import glob as _glob
+# 打包模板：write_patch 只借用模板的**头部结构**（前 0xC8+80*(N-1) 字节），
+# 所以任何合法的 patch 都能当模板，不必非要用某一版 Vanilla Plus 的中文翻译补丁
+# （v37 起那个 ChineseTranslation 目录已经没有了）。
+def _find_template():
+    cands = _glob.glob(os.path.join(MODS, "Vanilla Plus Megapack*", "options",
+                                    "*", "9ba626afa44a3aa3.patch_0"))
+    if not cands:
+        cands = _glob.glob(os.path.join(MODS, "*", "*", "9ba626afa44a3aa3.patch_0"))
+        cands += _glob.glob(os.path.join(MODS, "*", "*", "*", "9ba626afa44a3aa3.patch_0"))
+    # 优先挑 entry 数少、体积小的，头部结构最简单
+    cands = [c for c in cands if os.path.getsize(c) < 200 * 1024]
+    cands.sort(key=lambda p: os.path.getsize(p))
+    return cands[0] if cands else ""
+
+TEMPLATE = _find_template()
+
+# 包 B（Transmog 界面汉化）的基底：优先用模组库里的**当前版本**（上游更新后自动跟随），备份仅作兜底
 _tm = sorted(_glob.glob(os.path.join(MODS, "HD2 Transmog*", "Addon", "9ba626afa44a3aa3.patch_0")),
              key=os.path.getmtime)
-TM_PATCH = _tm[-1] if _tm else os.path.join(MODS, "HD2 Transmog (Foundation) 16633 0.1.5 2026-09-28T20-24Z 8MtblTk5q_AR931809", "Addon", "9ba626afa44a3aa3.patch_0")
+TM_PATCH = _tm[-1] if _tm else os.path.join(
+    BACKUP, "HD2 Transmog Foundation 0.2.0 (Alpha) 16633 0.2.1 "
+            "2026-10-04T14-37Z PjshZUxBj_AR829814", "Addon", "9ba626afa44a3aa3.patch_0")
+if not TEMPLATE:
+    raise RuntimeError("找不到可用的 patch 模板（模组库里一个 patch 都没有？）")
+
 buf = io.StringIO()
 
 
@@ -146,7 +165,9 @@ def build_transmog_lua():
         ("' saved'", "' 个已保存'"),
         ("' owned choices'", "' 个可选'"),
         # —— 第四轮补齐：变体编辑器的空状态提示（纯赋值，不参与任何判定）——
-        ("'No variant selected'", "'未选择任何变体'")]
+        ("'No variant selected'", "'未选择任何变体'"),
+        # —— 第五轮补齐：作者调试探针面板的标签（普通玩家看不到，补上求完整）——
+        ("'PASSIVE ICON PROBE / '", "'被动图标探针 / '")]
     n = 0
     for a, b in REPL:
         c = lua.count(a)
