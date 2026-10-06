@@ -316,6 +316,70 @@ end
 --   B. 菜单还没就绪（我们比它先加载）→ 挂到游戏主循环上，等它出现的那一帧抢先接管。
 -- 之后每隔 20 帧补翻一次，直到连着 3 次都翻不出新东西为止。
 -- 全部收工后 done = true，主循环里只剩一次真假判断。
+
+-- ───────────────── 十、Bingus Text 官方翻译包 ─────────────────
+-- 为什么要走这条路：Vanilla Plus 的十七个子模组（浅水潜行等）是在 Bingus 加载器
+-- 的 after_startup 事件里"一次性"注册的，那一刻本脚本的钩子还没装上；而它们取
+-- 文字走的是 Bingus Text 的翻译表（option_text -> translator），所以只能从官方
+-- 翻译包这条正路进去，钩子和补翻都够不着。
+--
+-- 用法：全局表 _G.BingusTranslations 是各模组共用的一本"词典"，packs 是个数组。
+-- 往里加一条 {language=..., name=..., mods={模组标识 = {键 = 译文}}} 即可；
+-- 加完必须把 serial 加一 —— 各模组靠 serial 判断词典有没有更新，不加就不会重查。
+local GNH_PACK_NAME = 'GNH Simplified Chinese Pack'
+
+-- 浅水潜行的条目：键取自它字节码里的 option.depth.* （模组自己的英文文本表用的就是这两个键）
+local GNH_SWD = {
+    -- 模组名（左侧分类按钮上显示的名字）：键名取自 Vanilla Plus 里
+    -- 'mod = option_text(tr, options_menu, "option.mod", 40)' 这一行。
+    ['option.mod'] = '浅水潜行',
+    ['option.depth.label'] = '最大入水深度',
+    ['option.depth.description'] = '潜水的最大入水深度，从脚底往上量：0.20（小腿下段，原版上限）到 1.30（此时潜兵会开始游泳）。更深的水域始终沿用游戏原本的行为。',
+}
+
+-- Mod 选项菜单自身的界面文字。它的词典是 {mod = 'mod_options_menu', strings = {...}}，
+-- 键名逐条抄自源码里的英文词典；{page} / {pages} 是它自己的占位符，必须原样保留，
+-- 否则菜单会因"占位符与英文不符"而拒收这条译文。
+local GNH_MOM = {
+    ['tab.mods'] = '模组',
+    ['category.none'] = '未安装任何模组选项',
+    ['category.page'] = '第 {page} / {pages} 页',
+    ['page.label'] = '模组分页',
+    ['page.description'] = '分类按钮一次显示 7 个模组，翻页可查看其余。',
+}
+
+-- 同一个模组在不同版本里可能用不同的标识，全部挂上；挂多余的没有副作用。
+local function bingus_mods()
+    local out = {}
+    for _, name in ipairs({ 'shallow_water_diving', 'ShallowWaterDiving', 'Shallow Water Diving' }) do
+        out[name] = GNH_SWD
+    end
+    out['mod_options_menu'] = GNH_MOM
+    return out
+end
+
+local bingus_done = false
+
+local function install_bingus_pack()
+    if bingus_done then return true end
+    local ok, done = pcall(function()
+        local reg = rawget(_G, 'BingusTranslations')
+        if type(reg) ~= 'table' or tonumber(reg.version) ~= 1 then return false end
+        if type(reg.packs) ~= 'table' then reg.packs = {} end
+        for _, p in ipairs(reg.packs) do
+            if type(p) == 'table' and p.name == GNH_PACK_NAME then return true end
+        end
+        reg.packs[#reg.packs + 1] = { language = 'zh-Hans', name = GNH_PACK_NAME, mods = bingus_mods() }
+        reg.serial = (tonumber(reg.serial) or 0) + 1
+        return true
+    end)
+    if ok and done then
+        bingus_done = true
+        log('已注册 Bingus Text 翻译包（供 Vanilla Plus 子模组使用）')
+    end
+    return bingus_done
+end
+
 local sweep_calls, sweep_idle = 0, 0
 local frame, wait_options, wait_bindings = 0, 0, 0
 local done = false
@@ -353,6 +417,7 @@ local function tick()
     end
 
     -- 3) 周期性补翻
+    if not bingus_done and frame % 10 == 0 then pcall(install_bingus_pack) end
     if sweep_idle < 3 and frame % 20 == 0 then pcall(sweep_tick) end
 
     -- 4) 该做的都做完了 → 交还主循环
@@ -375,6 +440,7 @@ rawset(_G, 'GNH_CN_PACK_LOADED', true)
 
 for _ in pairs(GNH_CN) do GNH_COUNT = GNH_COUNT + 1 end
 
+pcall(install_bingus_pack)
 try_hook()
 pcall(try_hook_bindings)
 if hooked or bindings_hooked then pcall(sweep_tick) end
