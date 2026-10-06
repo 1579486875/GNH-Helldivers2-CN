@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """make_readme5.py -- 2026-10-05 第二版说明（加入 C-Rig 骨骼运行时）。"""
 import json, os, re, sqlite3
 
@@ -72,7 +72,7 @@ L = []
 W = L.append
 W("=" * 66)
 W("  绝地潜兵 2 · 模组包")
-W("  %d 个模组 | 合计 %.0f MB | 打包于 2026-10-05" % (len(LIST), sum(v[1] for v in LIST.values()) / 1048576))
+W("  %d 个模组 | 合计 %.0f MB | 打包于 %s" % (len(LIST), sum(v[1] for v in LIST.values()) / 1048576, TODAY))
 W("=" * 66)
 W("")
 W("【快速开始 · 四步】")
