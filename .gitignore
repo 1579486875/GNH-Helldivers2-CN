@@ -11,4 +11,4 @@ tools/extracted/
 # 临时文件
 *.tmp
 Thumbs.db
-desktop.ini
+desktop.ini*.bak_*

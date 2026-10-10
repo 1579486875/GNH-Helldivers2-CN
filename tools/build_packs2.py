@@ -9,11 +9,36 @@ from cn_strings import CN
 from hd2_patch import PatchFile, murmur64a, p32, p64, align8
 
 MODS = os.path.join(os.environ["LOCALAPPDATA"], "hd2arsenal", "mods")
+LA = os.path.join(os.environ["LOCALAPPDATA"], "hd2arsenal")
 BACKUP = r"E:\TAML\_scratch\hd2\backup"
 DATA = r"C:\SteamLibrary\steamapps\common\Helldivers 2\data"
 LOG = r"E:\TAML\_scratch\hd2\notes\build_packs2.txt"
-PACK_A = os.path.join(MODS, "GNH-Chinese-Simplified-Pack")
-PACK_B = os.path.join(MODS, "GNH-Transmog-CN-Addon")
+
+
+def _our_pack_dir(label_key, fallback_name):
+    """找出我们那个汉化包在 Arsenal 里的**实际**目录。
+
+    为什么不能写死目录名：Arsenal 导入模组时会自己起一个带 `_AR<数字>` 后缀的目录，
+    真正的路径只有 hd2a_data.json 里知道。2026-10-04 就是因为在脚本里写死了
+    `GNH-Chinese-Simplified-Pack` 这个名字，构建产物一直写进一个 Arsenal 根本不看的
+    孤儿目录，必须再手工跑一次 sync_to_arsenal.py 才会生效 —— 那次踩坑的直接后果是
+    用户点了一次 Deploy，汉化被换回旧版本。所以这里改成从 Arsenal 状态里现查。
+    """
+    try:
+        st = json.load(io.open(os.path.join(LA, "hd2a_data.json"), encoding="utf-8"))
+    except Exception:
+        st = None
+    if st:
+        for m in st["modsList"]["default"]["mods"]:
+            if label_key in str(m.get("label")) and m.get("path") and os.path.isdir(m["path"]):
+                return m["path"]
+    p = os.path.join(MODS, fallback_name)
+    print("⚠️ 在 Arsenal 状态里没找到「%s」，回退到 %s" % (label_key, p))
+    return p
+
+
+PACK_A = _our_pack_dir("GNH 简体中文汉化包", "GNH-Chinese-Simplified-Pack")
+PACK_B = _our_pack_dir("GNH Transmog 界面汉化", "GNH-Transmog-CN-Addon")
 # 打包模板：write_patch 只借用模板的**头部结构**（前 0xC8+80*(N-1) 字节），
 # 所以任何合法的 patch 都能当模板，不必非要用某一版 Vanilla Plus 的中文翻译补丁
 # （v37 起那个 ChineseTranslation 目录已经没有了）。
@@ -167,7 +192,11 @@ def build_transmog_lua():
         # —— 第四轮补齐：变体编辑器的空状态提示（纯赋值，不参与任何判定）——
         ("'No variant selected'", "'未选择任何变体'"),
         # —— 第五轮补齐：作者调试探针面板的标签（普通玩家看不到，补上求完整）——
-        ("'PASSIVE ICON PROBE / '", "'被动图标探针 / '")]
+        ("'PASSIVE ICON PROBE / '", "'被动图标探针 / '"),
+        # —— 第六轮补齐（2026-10-10）：0.2.1 新增的「军械库 3D 预览」选项说明 ——
+        # 注意：这里替换的是 **Lua 源码字面量**，所以必须保持 Lua 的转义写法（game\'s）。
+        ("description='Full render draws the large Armory model through the game\\'s full pipeline, with hair and the lighting of the generated previews. It needs temporal anti-aliasing; without it, and with Game default, the game draws the model itself.'",
+         "description='完整渲染会用游戏的完整管线绘制军械库中的大模型，包含头发与预览图同款光照。它需要时间抗锯齿；若未开启，或在「游戏默认」下，则由游戏自行绘制模型。'")]
     n = 0
     for a, b in REPL:
         c = lua.count(a)
@@ -246,55 +275,63 @@ W("  manifest.json 已写入（含冲突说明）")
 # ---------------- 同步到游戏 data ----------------
 W("")
 W("### 部署到 data")
-zh_re = re.compile(r"[\u4e00-\u9fff]")
+# 默认**不**写游戏 data：汉化包由 Arsenal 在 Deploy 时统一写入。
+# 需要手动部署（例如没装 Arsenal）时，设 GNH_DEPLOY_DATA=1 再跑本脚本。
+DEPLOY_DATA = os.environ.get("GNH_DEPLOY_DATA") == "1"
+if DEPLOY_DATA:
+    zh_re = re.compile(r"[\u4e00-\u9fff]")
 
-def our_kind(path):
-    """只认本脚本自己的部署产物，绝不误删别人的 patch。
+    def our_kind(path):
+        """只认本脚本自己的部署产物，绝不误删别人的 patch。
 
-    包 A 的独有资源是 mods/gnh_cn/*；包 B 覆盖 mods/hd2transmog/foundation，
-    而官方原版那份 foundation 里一个汉字都没有（实测 zh 计数 = 0），
-    因此"含汉字"就能可靠地区分我们的汉化版与原版。
-    """
-    try:
-        dpf = PatchFile.load(path)
-    except Exception:
+        包 A 的独有资源是 mods/gnh_cn/*；包 B 覆盖 mods/hd2transmog/foundation，
+        而官方原版那份 foundation 里一个汉字都没有（实测 zh 计数 = 0），
+        因此"含汉字"就能可靠地区分我们的汉化版与原版。
+        """
+        try:
+            dpf = PatchFile.load(path)
+        except Exception:
+            return None
+        for e in dpf.entries:
+            pc = e.path_comment or ""
+            if pc.startswith("mods/gnh_cn"):
+                return "A"
+            if pc == "mods/hd2transmog/foundation" and zh_re.search(e.data.decode("utf-8", "ignore")):
+                return "B"
         return None
-    for e in dpf.entries:
-        pc = e.path_comment or ""
-        if pc.startswith("mods/gnh_cn"):
-            return "A"
-        if pc == "mods/hd2transmog/foundation" and zh_re.search(e.data.decode("utf-8", "ignore")):
-            return "B"
-    return None
 
-had_b = False
-for n in sorted(os.listdir(DATA)):
-    if not (n.startswith("9ba626afa44a3aa3.patch_") and n.split("_")[-1].isdigit()):
-        continue
-    p = os.path.join(DATA, n)
-    if not os.path.isfile(p):
-        continue
-    kind = our_kind(p)
-    if kind:
-        for suffix in ("", ".gpu_resources", ".stream"):
-            q = p + suffix
-            if os.path.exists(q): os.remove(q)
-        W("  移除本脚本的旧部署: %s（%s 包，含伴生文件）" % (n, kind))
-        if kind == "B": had_b = True
+    had_b = False
+    for n in sorted(os.listdir(DATA)):
+        if not (n.startswith("9ba626afa44a3aa3.patch_") and n.split("_")[-1].isdigit()):
+            continue
+        p = os.path.join(DATA, n)
+        if not os.path.isfile(p):
+            continue
+        kind = our_kind(p)
+        if kind:
+            for suffix in ("", ".gpu_resources", ".stream"):
+                q = p + suffix
+                if os.path.exists(q): os.remove(q)
+            W("  移除本脚本的旧部署: %s（%s 包，含伴生文件）" % (n, kind))
+            if kind == "B": had_b = True
 
-nums = [int(n.split("_")[-1]) for n in os.listdir(DATA) if n.startswith("9ba626afa44a3aa3.patch_") and n.split("_")[-1].isdigit()]
-nxt = max(nums) + 1
-dst = os.path.join(DATA, "9ba626afa44a3aa3.patch_%d" % nxt)
-shutil.copy2(os.path.join(PACK_A, "Addon", "9ba626afa44a3aa3.patch_0"), dst)
-for suffix in (".gpu_resources", ".stream"): open(dst + suffix, "wb").close()
-W("  包 A 部署为 patch_%d (%d 字节)" % (nxt, os.path.getsize(dst)))
+    nums = [int(n.split("_")[-1]) for n in os.listdir(DATA) if n.startswith("9ba626afa44a3aa3.patch_") and n.split("_")[-1].isdigit()]
+    nxt = max(nums) + 1
+    dst = os.path.join(DATA, "9ba626afa44a3aa3.patch_%d" % nxt)
+    shutil.copy2(os.path.join(PACK_A, "Addon", "9ba626afa44a3aa3.patch_0"), dst)
+    for suffix in (".gpu_resources", ".stream"): open(dst + suffix, "wb").close()
+    W("  包 A 部署为 patch_%d (%d 字节)" % (nxt, os.path.getsize(dst)))
 
-if had_b:
-    dstb = os.path.join(DATA, "9ba626afa44a3aa3.patch_%d" % (nxt + 1))
-    shutil.copy2(os.path.join(PACK_B, "Addon", "9ba626afa44a3aa3.patch_0"), dstb)
-    for suffix in (".gpu_resources", ".stream"): open(dstb + suffix, "wb").close()
-    W("  包 B 部署为 patch_%d (%d 字节)" % (nxt + 1, os.path.getsize(dstb)))
+    if had_b:
+        dstb = os.path.join(DATA, "9ba626afa44a3aa3.patch_%d" % (nxt + 1))
+        shutil.copy2(os.path.join(PACK_B, "Addon", "9ba626afa44a3aa3.patch_0"), dstb)
+        for suffix in (".gpu_resources", ".stream"): open(dstb + suffix, "wb").close()
+        W("  包 B 部署为 patch_%d (%d 字节)" % (nxt + 1, os.path.getsize(dstb)))
+    else:
+        W("  包 B 在 data 目录里没有旧部署，本次不新增（需要时在 Arsenal 里启用「GNH Transmog 界面汉化（可选）」）")
+
 else:
-    W("  包 B 在 data 目录里没有旧部署，本次不新增（需要时在 Arsenal 里启用「GNH Transmog 界面汉化（可选）」）")
+    W("  已跳过：汉化包以 Arsenal 模组形式存在，点 Deploy 时由 Arsenal 统一写入 data。")
+    W("  如需手动写入 data，设置环境变量 GNH_DEPLOY_DATA=1 后重跑。")
 open(LOG, "w", encoding="utf-8").write(buf.getvalue())
 print("ok")

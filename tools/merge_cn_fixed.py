@@ -5,7 +5,7 @@ HD2 = r"E:\TAML\_scratch\hd2"
 SPEC = [("cn_add.py", "CN_ADD"), ("cn_desc.py", "CN_DESC"), ("cn_fix.py", "CN_FIX"),
         ("cn_mods.py", "CN_MODS"), ("cn_mods2.py", "CN_MODS2"), ("cn_new.py", "CN_NEW"),
         ("cn_strings.py", "CN"),
-        ("cn_ui3.py", "CN_UI3"), ("cn_ui4.py", "CN_UI4"), ("cn_ui5.py", "CN_UI5"), ("cn_mods3.py", "CN_MODS3"), ("cn_mods4.py", "CN_MODS4"), ("cn_mods5.py", "CN_MODS5"), ("cn_batch1.py", "CN_BATCH"), ("cn_batch2.py", "CN_BATCH2"), ("cn_batch3.py", "CN_BATCH3"), ("cn_runtime.py", "CN_RUNTIME"), ("cn_pack6.py", "CN_PACK6"), ("cn_pack7.py", "CN_PACK7"), ("cn_pack8.py", "CN_PACK8"), ("cn_pack9.py", "CN_PACK9")]
+        ("cn_ui3.py", "CN_UI3"), ("cn_ui4.py", "CN_UI4"), ("cn_ui5.py", "CN_UI5"), ("cn_mods3.py", "CN_MODS3"), ("cn_mods4.py", "CN_MODS4"), ("cn_mods5.py", "CN_MODS5"), ("cn_batch1.py", "CN_BATCH"), ("cn_batch2.py", "CN_BATCH2"), ("cn_batch3.py", "CN_BATCH3"), ("cn_runtime.py", "CN_RUNTIME"), ("cn_pack6.py", "CN_PACK6"), ("cn_pack7.py", "CN_PACK7"), ("cn_pack8.py", "CN_PACK8"), ("cn_pack9.py", "CN_PACK9"), ("cn_pack10.py", "CN_PACK10")]
 
 CN = {}
 for f, key in SPEC:
