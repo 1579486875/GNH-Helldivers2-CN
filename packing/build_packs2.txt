@@ -1,0 +1,14 @@
+### 包 A：GNH简体中文汉化包-Hellldivers2_AR395600
+  patch 267336 字节, 2 entry
+    entry0 len=266305  id匹配=True mods/gnh_cn/zh_hans
+    entry1 len=736     id匹配=True mods/gnh_cn/readme
+  manifest.json 已更新（零冲突说明）
+
+### 包 B：GNH-Transmog界面汉化-可选包_AR971368
+  patch 2870088 字节, 1 entry（替换 72 处）
+    entry0 len=2869889  id匹配=True mods/hd2transmog/foundation
+  manifest.json 已写入（含冲突说明）
+
+### 部署到 data
+  已跳过：汉化包以 Arsenal 模组形式存在，点 Deploy 时由 Arsenal 统一写入 data。
+  如需手动写入 data，设置环境变量 GNH_DEPLOY_DATA=1 后重跑。

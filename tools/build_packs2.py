@@ -6,13 +6,13 @@
 import os, sys, io, json, uuid, shutil, hashlib, re, glob as _glob
 sys.path.insert(0, r"E:\TAML\_scratch\hd2")
 from cn_strings import CN
-from hd2_patch import PatchFile, murmur64a, p32, p64, align8
+from hd2_patch import PatchFile, murmur64a, p32, p64, u64, align8
 
 MODS = os.path.join(os.environ["LOCALAPPDATA"], "hd2arsenal", "mods")
 LA = os.path.join(os.environ["LOCALAPPDATA"], "hd2arsenal")
 BACKUP = r"E:\TAML\_scratch\hd2\backup"
 DATA = r"C:\SteamLibrary\steamapps\common\Helldivers 2\data"
-LOG = r"E:\TAML\_scratch\hd2\notes\build_packs2.txt"
+LOG = r"E:\TAML\GNH-Helldivers2-CN\packing\build_packs2.txt"
 
 
 def _our_pack_dir(label_key, fallback_name):
@@ -203,24 +203,75 @@ def build_transmog_lua():
         if c: lua = lua.replace(a, b); n += c
     return lua, n
 
+# ═══════════════════════════════════════════════════════════════════════════
+# 【2026-10-13 事故修复】write_patch 必须**自己写全** 80 字节的记录，
+# 不能只改 res_id / offset / length 三项就从模板抄其余字段。
+#
+# 事故经过：本函数原先用 head_len = 0xC8 + 80*(N-1) 从"模板"里截取头部，
+# 而 _find_template() 特意挑**体积最小**的 patch 当模板（实测选中了 HD2Runtime
+# 的 runtime_wheel_hook_off，288 字节）。那个模板真实头部只有 0x68+80*1 = 0xC8，
+# 当 N=2 时 head_len=0x118 **越过了它的数据区**，于是模板数据区开头的
+# "mouse wheel hook off" 那几十个字节被当成了 entry1 的记录：
+#   · bundleId 被写成 (len=0x54, type=2) 拼出来的 8589934676
+#   · +0x18/+0x20/+0x28/+0x30/+0x40/+0x48 全是脏数据
+# 后果：游戏按错误的 bundleId 找资源，**直接崩在 helldivers2.exe+0x5F2EB0**
+# （同一地址反复崩，且 Lua 脚本根本没机会执行、日志零更新）。只影响"双 entry"的包。
+#
+# 现在的做法：头部只取到 0x00..0x68（文件级字段），记录区**整体清零后逐字段写入**。
+# ═══════════════════════════════════════════════════════════════════════════
+REC_STRIDE = 80
+REC_BASE = 0x68
+REC_TAIL_CONST = 0x1000000000          # +0x40，实测所有正常 patch 恒为该值
+REC_LAST_CONST = 0x10                  # +0x48 低 32 位恒为该值；高 32 位 = entry 序号
+
+
 def write_patch(entries, dest):
     tmpl = PatchFile.load(TEMPLATE)
-    head_len = 0xC8 + 80 * (len(entries) - 1)
-    blob = bytearray(tmpl.raw[:head_len])
+    n = len(entries)
+    bundle_id = u64(tmpl.raw, 0x50)     # 文件级 bundle id：每个 entry 的 +0x08 都应是它
+    blob = bytearray(tmpl.raw[:REC_BASE])           # 只借 0x00..0x68 的文件级字段
+    blob[0x68:0x68 + REC_STRIDE * n] = b"\x00" * (REC_STRIDE * n)   # 记录区清零
     for i, (path, text) in enumerate(entries):
         payload = text.encode("utf-8")
         rec = len(blob)
         blob += p32(len(payload)) + p32(2) + payload
         blob += b"\x00" * (align8(len(payload)) - len(payload))
-        blob[0x68 + 80 * i:0x70 + 80 * i] = p64(murmur64a(path.encode()))
-        blob[0x78 + 80 * i:0x80 + 80 * i] = p64(rec)
-        blob[0xA0 + 80 * i:0xA8 + 80 * i] = p64(len(payload) + 8)
+        b0 = REC_BASE + REC_STRIDE * i
+        blob[b0 + 0x00:b0 + 0x08] = p64(murmur64a(path.encode()))      # res_id
+        blob[b0 + 0x08:b0 + 0x10] = p64(bundle_id)                     # bundleId ★
+        blob[b0 + 0x10:b0 + 0x18] = p64(rec)                           # record offset
+        # +0x18..+0x30 保持 0（上面已整片清零）
+        blob[b0 + 0x38:b0 + 0x40] = p64(len(payload) + 8)              # 数据长度 + 8
+        blob[b0 + 0x40:b0 + 0x48] = p64(REC_TAIL_CONST)                # +0x40 ★
+        blob[b0 + 0x48:b0 + 0x50] = p64((i << 32) | REC_LAST_CONST)    # +0x48 ★
     blob[0x20:0x24] = p32(len(blob))
-    blob[0x08:0x0C] = p32(len(entries))      # entry 计数（u32）
-    blob[0x58:0x60] = p64(len(entries))      # entry 计数（u64）
+    blob[0x08:0x0C] = p32(n)                 # entry 计数（u32）
+    blob[0x58:0x60] = p64(n)                 # entry 计数（u64）
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     with open(dest, "wb") as fh: fh.write(blob)
-    return PatchFile.load(dest)
+    pf = PatchFile.load(dest)
+    _assert_clean_records(pf, dest)
+    return pf
+
+
+def _assert_clean_records(pf, dest):
+    """构建后自检：记录区不得有脏数据（2026-10-13 事故的守门人）。
+
+    判据：每个 entry 的 bundleId == 文件级 bundle id；+0x18..+0x30 必须为 0。
+    """
+    raw = pf.raw
+    want_bundle = u64(raw, 0x50)
+    problems = []
+    for e in pf.entries:
+        b0 = REC_BASE + REC_STRIDE * e.index
+        bundle = u64(raw, b0 + 0x08)
+        tail = [u64(raw, b0 + 8 * k) for k in (3, 4, 5, 6)]
+        if bundle != want_bundle:
+            problems.append("entry%d bundleId=%d 应为 %d" % (e.index, bundle, want_bundle))
+        if any(tail):
+            problems.append("entry%d 保留字段非 0: %s" % (e.index, tail))
+    if problems:
+        raise RuntimeError("记录区自检失败（%s）：%s" % (dest, "; ".join(problems)))
 
 # ---------------- 包 A：零冲突 ----------------
 runtime = build_runtime_lua()
@@ -333,5 +384,6 @@ if DEPLOY_DATA:
 else:
     W("  已跳过：汉化包以 Arsenal 模组形式存在，点 Deploy 时由 Arsenal 统一写入 data。")
     W("  如需手动写入 data，设置环境变量 GNH_DEPLOY_DATA=1 后重跑。")
+os.makedirs(os.path.dirname(LOG), exist_ok=True)
 open(LOG, "w", encoding="utf-8").write(buf.getvalue())
 print("ok")

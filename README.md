@@ -1069,3 +1069,107 @@ HD2Runtime 对自己的位置没有任何要求（未提及）；两者资源 id
 | 4 | `tools/verify_desc_order.py` | 验收：简介全中文 + 关键顺序正确 |
 
 前两步都要求 **Arsenal 完全退出**，且都改同一个 `hd2a_data.json`，必须**串行执行**。
+
+---
+
+## 十七、★★★ 2026-10-13 事故：打包工具"记录区污染"导致游戏启动崩溃
+
+**一句话**：`build_packs2.py` 生成 patch 时，每个 entry 只写了 3 个字段，其余从"模板"照抄；
+而模板是特意挑的**最小 patch**（HD2Runtime 的 `runtime_wheel_hook_off`，288 字节），
+截取头部时越过了它的真实数据区，把 `mouse wheel hook off…` 那几十字节**当成了 entry1 的记录**。
+结果 `bundleId` 被写成脏值，游戏按错误的包标识找资源，**启动即崩**。
+
+### 17.1 现象（很有迷惑性）
+
+- 游戏点启动后 **40~45 秒必崩**（有时 15 秒），报 Sony 崩溃报告器「此游戏发生错误」。
+- 崩了 **6 次以上，每次异常地址完全相同**：`ACCESS_VIOLATION` @ `helldivers2.exe+0x5F2EB0`。
+- 对比 60 多次历史崩溃，**这个位置以前从未出现过**（历史多在 `game.dll+0x5C9C27` 等）。
+- 禁用「GNH 简体中文汉化包」就能进游戏；启用就崩 → 用户判断"是我们的汉化问题"，**判断正确**。
+
+### 17.2 关键证据：两个"日志"决定了排查方向
+
+| 位置 | 内容 | 说明 |
+|---|---|---|
+| `%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\GNHChinesePack.log` | 汉化包自己的运行日志 | **10-13 六次崩溃中一次都没更新** |
+| `%APPDATA%\Arrowhead\Helldivers2\dumps\dump-*.dmp` | 每次崩溃的 minidump | 1.4 MB，可解析出异常代码/地址/模块 |
+
+**"日志零更新"是最强的信号**：说明脚本**根本没机会执行**，崩溃发生在它之前的**资源加载阶段**。
+只查 Lua 逻辑、翻译表、长度限制，全是在错误的层面上找。
+
+**minidump 解析**（`tools/parse_hd2_dump.py`）：minidump 的 **ModuleListStream（type 4）**
+给出所有已加载模块的基址，**ExceptionStream（type 6）**给出异常代码与地址；
+把地址落到模块区间就能定位出错模块。本次即由此确定 `helldivers2.exe+0x5F2EB0`
+（而不是 `lua51.dll`），从而排除"Lua 报错"。
+
+> 另注：`LastWriteTime` 会骗人。Arsenal 复制文件时保留源时间戳，所以 `data` 里的
+> `patch_*` 永远显示模组目录里的旧时间，"看时间戳判断有没有部署"是错的（本次踩过）。
+
+### 17.3 根因（二进制层面）
+
+patch 的 entry 记录是 **80 字节**，字段布局（基址 `0x68 + 80*i`）：
+
+| 相对偏移 | 含义 | 正确值 |
+|---|---|---|
+| `+0x00` | res_id = `murmur_hash_64A(路径, seed=0)` | 由路径算出 |
+| **`+0x08`** | **bundleId** | **与文件级 `0x50` 处的值相同（11623383793923069922）** |
+| `+0x10` | 数据记录偏移 | 写入位置 |
+| `+0x18`~`+0x30` | 保留 | **必须全 0** |
+| `+0x38` | 数据长度 + 8 | — |
+| `+0x40` | 常量 | `0x1000000000`（68719476736） |
+| `+0x48` | 低 32 位常量 `0x10`，高 32 位 = entry 序号 | entry0=16，entry1=4294967312 |
+
+出事的代码：
+
+```python
+head_len = 0xC8 + 80 * (len(entries) - 1)      # 2 个 entry → 0x118
+blob = bytearray(tmpl.raw[:head_len])          # ← 越过模板真实头部（只有 0xC8）
+for i, (path, text) in enumerate(entries):
+    blob[0x68 + 80*i : ...] = p64(murmur64a(...))   # 只写 res_id
+    blob[0x78 + 80*i : ...] = p64(rec)              # 只写 offset
+    blob[0xA0 + 80*i : ...] = p64(len(payload)+8)   # 只写 length
+```
+
+实测脏值：`entry1.bundleId = 8589934676`（= 模板数据区里 `54 00 00 00 02 00 00 00`
+即 `(length=0x54, type=2)` 的原地内容），`+0x18..+0x30` 则残留
+`mouse wheel hook off" install op…ntime/mouse_wheel.lua).\nreturn t`。
+
+**为什么只影响"双 entry"的包**：单 entry 时 `head_len = 0xC8` 恰好不越界。
+所以 pack B（1 entry）一直干净，pack A（2 entry）中招；"孤儿包"因同一模板同样中招。
+
+### 17.4 修复
+
+**工具层（根治）**：`write_patch()` 改为
+① 头部只取 `0x00..0x68`（文件级字段）；
+② 记录区**整体清零**后**逐字段写全**（res_id / bundleId / offset / 长度 / `+0x40` / `+0x48`）；
+③ 新增构建后自检 `_assert_clean_records()`：任一 entry 的 bundleId ≠ 文件级 bundleId、
+或 `+0x18..+0x30` 非 0，直接 `RuntimeError` 中止。
+
+**产物层（已修的数据）**：当前两包均已用新工具重建，记录区 0 问题，res_id 全部匹配。
+`data` 里已部署的旧文件需要**在 Arsenal 里重新 Deploy** 才会被替换。
+
+**应急脚本**：若日后又拿到被污染的包，可用 `tools/fix_patch_records.py --dry/--write`
+逐字段修正（等长改写，文件大小不变）。
+
+### 17.5 排查弯路（教训）
+
+| 我的判断 | 实际情况 |
+|---|---|
+| Bingus 加载器排到末位导致崩溃 | **无关**（还原顺序后照样崩） |
+| 10-10 新增的「Bingus Text 翻译包」是元凶 | **无关**（停用后照样崩） |
+| 词表 580 条新条目里某条触发菜单崩溃 | **无关**（崩在脚本执行之前） |
+| 长度限制按字节还是字符 | 官方口径是**字符**（`M.length`），且超限只拒绝不崩 |
+
+**根子上的错误**：看到"汉化包一启用就崩"就直接往 **Lua 逻辑**里找，
+没有第一时间确认**脚本到底有没有跑起来**。**日志零更新**这个信号一开始就在，
+但被忽略了近一小时。**下次遇到"某个 mod 一启用就崩"，第一步就该确认它的日志有没有产生。**
+
+### 17.6 本次新增的诊断工具
+
+| 工具 | 作用 |
+|---|---|
+| `tools/check_patch_records.py` | 全库检查 patch 记录区：bundleId 是否等于文件级值、保留字段是否全 0 |
+| `tools/fix_patch_records.py` | 修正被污染的记录区（等长改写，可 `--dry`） |
+| `tools/parse_hd2_dump.py` | 解析 `%APPDATA%\Arrowhead\Helldivers2\dumps\*.dmp`，输出异常代码/地址/出错模块 |
+
+**固定动作补充**：每次重新打包汉化包后，**必须**跑一次 `check_patch_records.py`，
+确认"问题 entry 数 = 0"再交付。
