@@ -12,7 +12,7 @@ import os, io, json, datetime, zipfile, hashlib, sys
 LA = os.path.join(os.environ["LOCALAPPDATA"], "hd2arsenal")
 MODS = os.path.join(LA, "mods")
 TODAY = datetime.date.today().strftime("%Y-%m-%d")
-OUTDIR = r"E:\TAML\HD2-模组合集-GNH个人汉化-%s" % TODAY
+OUTDIR = r"E:\TAML\绝地潜兵2-模组合集-GNH个人汉化-%s" % TODAY
 
 st = json.load(io.open(os.path.join(LA, "hd2a_data.json"), encoding="utf-8"))
 
@@ -28,12 +28,12 @@ def our_dir(label_key):
 PACKS = [
     (our_dir("GNH 简体中文汉化包"), "GNH 简体中文汉化包.zip", [
         r"E:\TAML\GNH简体中文汉化包-Hellldivers2.zip",
-        r"E:\TAML\GNH-Helldivers2-CN\dist\GNH简体中文汉化包-Hellldivers2.zip",
+        r"E:\TAML\绝地潜兵2-汉化\成品\GNH简体中文汉化包-Hellldivers2.zip",
         os.path.join(OUTDIR, "GNH 简体中文汉化包.zip"),
     ]),
     (our_dir("GNH Transmog 界面汉化"), "GNH Transmog 界面汉化（可选）.zip", [
         r"E:\TAML\GNH-Transmog界面汉化-可选包.zip",
-        r"E:\TAML\GNH-Helldivers2-CN\dist\GNH-Transmog界面汉化-可选包.zip",
+        r"E:\TAML\绝地潜兵2-汉化\成品\GNH-Transmog界面汉化-可选包.zip",
         os.path.join(OUTDIR, "GNH Transmog 界面汉化（可选）.zip"),
     ]),
 ]

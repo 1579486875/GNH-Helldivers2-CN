@@ -266,7 +266,7 @@ totalSize(0x20)      == 文件实际字节数
 > `bundleId` 被写成脏值，游戏按错误的包标识找资源，**启动即崩，6 次同地址**。
 > 而 `magic`、`entryCount`、`totalSize` **全部正常**，所以「结构校验通过」根本查不出来。
 
-**判定**：必须跑 `tools/check_patch_records.py`，输出 **「问题 entry 数 = 0」** 才算过。
+**判定**：必须跑 `脚本/check_patch_records.py`，输出 **「问题 entry 数 = 0」** 才算过。
 
 ### 2.2 资源层 —— `res_id` 必须与路径严格对应
 
@@ -569,7 +569,7 @@ Deployment finished: Y succeeded, 0 failed
 
 **路径**：`%APPDATA%\Arrowhead\Helldivers2\dumps\dump-YYYY-MM-DD-HH.MM.SS-<hash>-<机器名>-<pid>.dmp`
 
-**解析方法**（`tools/parse_hd2_dump.py`）：
+**解析方法**（`脚本/parse_hd2_dump.py`）：
 
 ```
 minidump 结构：
@@ -761,7 +761,7 @@ entry1 +0x18..30 = "mouse wheel hook off…" 的碎片
 
 **教训**
 1. **「结构校验通过」≠「结构正确」** —— 只验 magic/count/size 会漏掉字段级污染。
-2. **必须逐字段核对记录区**（`bundleId`、保留字段全 0），跑 `tools/check_patch_records.py`。
+2. **必须逐字段核对记录区**（`bundleId`、保留字段全 0），跑 `脚本/check_patch_records.py`。
 3. **「日志零产出」是最强信号** —— 它说明脚本没执行，问题在更底层。
    本次因为先怀疑 Lua 逻辑，白走了一小时（先后误判 Bingus 位置、翻译包、词表）。
 4. **打包工具必须自带构建后自检**：写脏数据就直接抛错中止，别让坏包子流出去。
@@ -1181,7 +1181,7 @@ assert len(raw) == orig_len, '文件长度被改变了！'   # ← 必须
 
 ---
 
-### B.10 工具脚本索引（`GNH-Helldivers2-CN\tools\`）
+### B.10 工具脚本索引（`绝地潜兵2-汉化\脚本\`）
 
 | 脚本 | 用途 |
 |---|---|

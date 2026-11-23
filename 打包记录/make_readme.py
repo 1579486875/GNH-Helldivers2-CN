@@ -4,7 +4,7 @@ import json, os, re, sqlite3
 
 import datetime
 TODAY = datetime.date.today().strftime("%Y-%m-%d")
-OUT = r"E:\TAML\HD2-模组合集-GNH个人汉化-%s" % TODAY
+OUT = r"E:\TAML\绝地潜兵2-模组合集-GNH个人汉化-%s" % TODAY
 D = os.path.join(os.environ["LOCALAPPDATA"], "hd2arsenal")
 LIST = {r[0]: (r[1], r[2]) for r in json.load(open(os.path.join(OUT, "_打包清单.json"), encoding="utf-8"))}
 

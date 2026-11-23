@@ -13,14 +13,14 @@
 
 | 路径 | 说明 |
 | --- | --- |
-| [`dist/GNH简体中文汉化包-Helldivers2.zip`](dist) | **主包**：零冲突，直接分发/自用 |
-| [`dist/GNH-Transmog界面汉化-可选包.zip`](dist) | 可选包：汉化 Transmog 界面，与 HD2 Transmog 有 1 处预期覆盖 |
-| [`tools/`](tools) | 构建与校验脚本（Python），见 [tools/README.md](tools/README.md) |
+| [`成品/GNH简体中文汉化包-Helldivers2.zip`](成品) | **主包**：零冲突，直接分发/自用 |
+| [`成品/GNH-Transmog界面汉化-可选包.zip`](成品) | 可选包：汉化 Transmog 界面，与 HD2 Transmog 有 1 处预期覆盖 |
+| [`脚本/`](脚本) | 构建与校验脚本（Python），见 [脚本/README.md](脚本/README.md) |
 | 本文件 | 完整说明、技术原理、历次极端场景验证记录 |
 
 **安装**：在 HD2 Arsenal 里「导入」对应 zip → 启用 → Deploy。建议放在模组列表靠后位置。
 
-> 下文出现的 `tools\...` 是开发时的原始路径；在本仓库中对应 `tools/` 目录。
+> 下文出现的 `脚本\...` 是开发时的原始路径；在本仓库中对应 `脚本/` 目录。
 > 脚本已改为相对路径，并支持用环境变量 `HD2_DATA` 指定游戏 data 目录。
 
 ---
@@ -43,7 +43,7 @@
 
 ### 二、已改动的文件
 
-改动前**全部已备份**，见 `tools\backup\`（保留原目录结构）。
+改动前**全部已备份**，见 `脚本\backup\`（保留原目录结构）。
 
 | 文件 | 说明 |
 | --- | --- |
@@ -64,7 +64,7 @@
 ### 四、怎么还原成英文
 
 ```powershell
-python tools\restore_hd2_cn.py
+python 脚本\restore_hd2_cn.py
 ```
 
 脚本会把备份还原到 mod 库并同步回游戏 `data` 目录；之后在 HD2 Arsenal 里再点一次 Deploy 也可以。
@@ -74,10 +74,10 @@ python tools\restore_hd2_cn.py
 - HD2 的模组 patch 文件（`9ba626afa44a3aa3.patch_N`）是 Stingray bundle patch：头部 + 若干 entry；每个 entry 有 `(u32 长度, u32 类型)` 记录，`type = 2` 就是**明文 Lua**。
 - 每个 entry 的资源 ID = `murmur_hash_64A("mods/…路径")`，与内容无关 —— 所以**替换 Lua 内容不影响资源定位**，只要更新「文件总大小 / entry 长度 / 长度+8」三个字段即可。
 - 工具与脚本（可重复使用）：
-  - `tools\hd2_patch.py` —— patch 读写、校验（自检覆盖全部 108 个 Lua entry，资源 ID 全部匹配）
-  - `tools\cn_strings.py` —— 675 组英文→中文词表（合并自 `cn_add.py` / `cn_desc.py` / `cn_fix.py` /
+  - `脚本\hd2_patch.py` —— patch 读写、校验（自检覆盖全部 108 个 Lua entry，资源 ID 全部匹配）
+  - `脚本\cn_strings.py` —— 675 组英文→中文词表（合并自 `cn_add.py` / `cn_desc.py` / `cn_fix.py` /
     `cn_mods.py` / `cn_mods2.py` / `cn_new.py` / `cn_ui3.py`）；运行时还会自动补一份全大写键，共 1290 条
-  - `tools\apply_cn_menu.py` / `apply_cn_transmog.py` —— 一键重新应用汉化（**幂等保护**，已应用过会拒绝重复执行）
+  - `脚本\apply_cn_menu.py` / `apply_cn_transmog.py` —— 一键重新应用汉化（**幂等保护**，已应用过会拒绝重复执行）
 - 每一步都用 `luaparser` 做了 **Lua 语法校验**（改前、改后各一次），并用 `hd2_patch.PatchFile` 复核了 patch 结构。
 
 ### 六、注意
@@ -350,8 +350,8 @@ end
 | **GNH 简体中文汉化包**（主包） | 只含 `mods/gnh_cn/zh_hans` + `mods/gnh_cn/readme`，运行时接管 ModOptionsMenu | **零冲突** | 分发/日常使用 |
 | GNH Transmog 界面汉化（可选包） | 覆盖 `mods/hd2transmog/foundation` | 与 HD2 Transmog 冲突 1 处（预期） | 想要 Transmog 界面中文时单独启用 |
 
-主包 zip：`dist\GNH简体中文汉化包-Helldivers2.zip`（约 8 KB）
-可选包 zip：`dist\GNH-Transmog界面汉化-可选包.zip`
+主包 zip：`成品\GNH简体中文汉化包-Helldivers2.zip`（约 8 KB）
+可选包 zip：`成品\GNH-Transmog界面汉化-可选包.zip`
 
 ### 三、为什么主包零冲突
 
@@ -436,8 +436,8 @@ Arsenal 会把每个模组的文件清单缓存进 `mod_headers` 表。旧版缓
 **最干净的做法**：在 Arsenal 里把 4 条 GNH 条目**全部删除**，再用最新的两个 zip 重新导入一次 —— 这样库里只会剩 2 条正确记录，冲突提示随之消失。
 
 zip 位置：
-- `dist\GNH简体中文汉化包-Helldivers2.zip`（零冲突主包）
-- `dist\GNH-Transmog界面汉化-可选包.zip`（覆盖式，会显示 1 处冲突，属正常）
+- `成品\GNH简体中文汉化包-Helldivers2.zip`（零冲突主包）
+- `成品\GNH-Transmog界面汉化-可选包.zip`（覆盖式，会显示 1 处冲突，属正常）
 
 
 ---
@@ -448,7 +448,7 @@ zip 位置：
 
 发布包中**不含**任何上游模组的文件副本（主包只提供 `mods/gnh_cn/*` 两个全新资源路径）；
 用户需自行安装 [HD2 Arsenal](https://www.nexusmods.com/helldivers2) 与相应上游模组（Vanilla Plus Megapack、HD2 Transmog 等）。
-若选择启用 `dist/GNH-Transmog界面汉化-可选包.zip`，它会覆盖 `mods/hd2transmog/foundation` —— 这是该可选包的预期行为。
+若选择启用 `成品/GNH-Transmog界面汉化-可选包.zip`，它会覆盖 `mods/hd2transmog/foundation` —— 这是该可选包的预期行为。
 
 ---
 
@@ -466,7 +466,7 @@ zip 位置：
 | 新增模组 | HD2 HUD+、Better Map Markers、Enhanced Sentries Revamped、Menacing Heavy Weapons、Muzzle Flash Smoke Remover、Concept Mech |
 
 **词表构成**：`cn_add.py`（选项名/值 261 条）、`cn_desc.py`（选项说明 105 条）、`cn_fix.py`（补漏 29 条）、
-`cn_mods.py`（模组名 20 条），合并去重后共 **444 条**（`tools/cn_strings.py`）。
+`cn_mods.py`（模组名 20 条），合并去重后共 **444 条**（`脚本/cn_strings.py`）。
 
 **未翻译项（刻意保留原文）**：武器/载具型号（`Flak36`、`Gau-19`、`M61`、`BAR`、`MG42`、`PKM`、`FRV` 等）、
 护甲代号（`A9`、`DP8`、`RS67`）、模组专名（`Castle ODST`、`HD2 HUD+`）与梗名（`Meet The Medic`）。
@@ -531,7 +531,7 @@ zip 位置：
 
 ### 四、词表补充（473 → 675 组，含大写形式 1026 条）
 
-新增 `tools/cn_ui3.py`，60 组词条**逐字符取自各模组的 Lua 源**（源文件已 dump 到 `tools/` 之外的 `lua_dump/` 便于复核）：
+新增 `脚本/cn_ui3.py`，60 组词条**逐字符取自各模组的 Lua 源**（源文件已 dump 到 `脚本/` 之外的 `lua_dump/` 便于复核）：
 
 | 来源 | 内容 |
 | --- | --- |
@@ -541,7 +541,7 @@ zip 位置：
 | HD2 Transmog | 按键名：`Select Next Transmog Piece`、`Next / Previous Transmog Variant` 等 |
 | 各模组 | MODS 页显示的模组名：`HD2 Transmog`、`Shallow Water Diving`、`Better Lobby Management` |
 
-扫描工具 `tools/scan_ui.py`：遍历模组库里全部 206 个 Lua entry，提取注册到菜单的界面文本，列出**词表里缺失**的条目。
+扫描工具 `脚本/scan_ui.py`：遍历模组库里全部 206 个 Lua entry，提取注册到菜单的界面文本，列出**词表里缺失**的条目。
 以后跟版本更新，只要重跑它就能知道还差哪些。
 
 ### 五、可选包（Transmog 界面）的三处修复
@@ -551,13 +551,13 @@ zip 位置：
    只替换真正上屏的两处 `text('Custom Variant', ...)`。
 2. **补齐遗漏**：`MODIFIED UNIQUE`、`Default: `、`Now (temporary): `、`Modded `、`Name and create`、
    `Set the look`、`D-pad / left stick: choose a look. A: select.`、`' saved'` / `' owned choices'`。
-3. **新增校验脚本 `tools/verify_tm.py`**：把上游原始 `foundation` 与汉化版逐行 diff，
+3. **新增校验脚本 `脚本/verify_tm.py`**：把上游原始 `foundation` 与汉化版逐行 diff，
    并统计 `== '...'` / `~= '...'` / `['...']` 三类**比较 / 索引语境**里的字面量是否被改动。
    **本次结果：受影响字面量 0 个** —— 即只动了上屏文本，没有动任何判定逻辑。
 
 ### 六、验证（真实 Lua 运行时，而不是只看日志）
 
-`tools/test_pack_lua.py` 用 `lupa` 起真实 Lua 运行时，构造一个与 ModOptionsMenu 内部结构一致的替身
+`脚本/test_pack_lua.py` 用 `lupa` 起真实 Lua 运行时，构造一个与 ModOptionsMenu 内部结构一致的替身
 （`state.options` / `state.mods` / `revision`），**先注册几个「比汉化包更早注册」的选项**，再加载主包的 Lua：
 
 | 检查项 | 结果 |
@@ -595,8 +595,8 @@ zip 位置：
 
 | 文件 | 职责 |
 | --- | --- |
-| `tools/lua_src/runtime_template.lua` | 运行时代码本体，388 行，**独立可读、可单独做语法检查** |
-| `tools/build_packs2.py` | 只负责把词表填进模板的 `--[[GNH_CN_TABLE]]` 占位符 |
+| `脚本/lua_src/runtime_template.lua` | 运行时代码本体，388 行，**独立可读、可单独做语法检查** |
+| `脚本/build_packs2.py` | 只负责把词表填进模板的 `--[[GNH_CN_TABLE]]` 占位符 |
 
 构建脚本新增两道自检：模板里找不到占位符直接报错；生成后的 Lua **编译不通过就中止构建**，绝不把坏文件打进 patch。
 
@@ -650,7 +650,7 @@ zip 位置：
 
 ### 五、词表审计
 
-用 `tools/audit_cn.py` 把 675 组词表整体过了一遍：
+用 `脚本/audit_cn.py` 把 675 组词表整体过了一遍：
 
 | 检查项 | 结果 |
 | --- | --- |
@@ -662,7 +662,7 @@ zip 位置：
 
 ### 六、覆盖率
 
-`tools/scan_ui2.py`（改进版，能正确处理 `..` 跨行拼接）扫描 207 个 Lua entry：
+`脚本/scan_ui2.py`（改进版，能正确处理 `..` 跨行拼接）扫描 207 个 Lua entry：
 
 - 识别出界面文本 **244 条**，词表已覆盖 **231 条（94.7%）**
 - 剩余 13 条全部是**刻意保留**：测试版专用文本（作者标注 "Test build only"）、
@@ -760,14 +760,14 @@ zip 位置：
 > 27 个模组（709.8 MB）打包在上面的链接里，一次下完，不用逐个去创意工坊订阅。
 > 下载后逐个导入 Arsenal 即可（一个 zip = 一个模组）。
 
-除了汉化包本身，仓库还保存了**整包转发**的说明与脚本，见 [`packing/`](packing)：
+除了汉化包本身，仓库还保存了**整包转发**的说明与脚本，见 [`打包记录/`](打包记录)：
 
 | 文件 | 说明 |
 | --- | --- |
-| [`packing/使用说明-2026-10-05.txt`](packing) | 27 个模组的分类清单、每个模组的启用建议、常见问题 |
-| [`packing/打包清单-2026-10-05.json`](packing) | 每个 zip 的文件数与体积（27 个模组） |
-| [`packing/pack_mods_full.py`](packing) | 打包脚本：读 Arsenal 的启用列表，把每个模组**整个目录**打成一个 zip（含全部选项，不裁剪） |
-| [`packing/make_readme.py`](packing) | 使用说明生成脚本 |
+| [`打包记录/使用说明-2026-10-05.txt`](打包记录) | 27 个模组的分类清单、每个模组的启用建议、常见问题 |
+| [`打包记录/打包清单-2026-10-05.json`](打包记录) | 每个 zip 的文件数与体积（27 个模组） |
+| [`打包记录/pack_mods_full.py`](打包记录) | 打包脚本：读 Arsenal 的启用列表，把每个模组**整个目录**打成一个 zip（含全部选项，不裁剪） |
+| [`打包记录/make_readme.py`](打包记录) | 使用说明生成脚本 |
 
 **打包内容**：当前启用的 **27 个模组**，合计 **709.8 MB**（压缩后）。每个 zip 都是完整模组，
 拿到就能直接导入 Arsenal，不需要回创意工坊。
@@ -779,8 +779,8 @@ zip 位置：
 
 ```powershell
 # 关掉 Arsenal（它运行时会锁状态文件）
-python packing/pack_mods_full.py      # 按当前启用列表打包
-python packing/make_readme.py         # 重新生成使用说明
+python 打包记录/pack_mods_full.py      # 按当前启用列表打包
+python 打包记录/make_readme.py         # 重新生成使用说明
 ```
 
 ---
@@ -874,7 +874,7 @@ python packing/make_readme.py         # 重新生成使用说明
 
 ### Arsenal 显示名的同步
 
-新增了 `tools/sync_arsenal_from_manifest.py`：**以 manifest 为准覆盖** Arsenal 的 `label` / `description`。
+新增了 `脚本/sync_arsenal_from_manifest.py`：**以 manifest 为准覆盖** Arsenal 的 `label` / `description`。
 与原来的 `sync_arsenal_names.py`（只做"翻译"，已含中文的会跳过）不同 ——
 模组更新后版本号变了（v18 → v19），只翻译是更新不到版本号的，必须按 manifest 覆盖。
 
@@ -896,7 +896,7 @@ python packing/make_readme.py         # 重新生成使用说明
 
 词表 **782 → 875 条**（含自动大写形式共 **1667** 个键）。
 
-### 二、HUD+ 0.2.2 的字符串池汉化（`tools/hud_cn.py`）
+### 二、HUD+ 0.2.2 的字符串池汉化（`脚本/hud_cn.py`）
 
 HUD+ 的界面文本不在 Lua 里，而在一段**多语言字符串池**中
 （英文段 → 波兰语段 → 西班牙语段……，每条以 NUL 分隔）。
@@ -957,13 +957,13 @@ HUD+ 的界面文本不在 Lua 里，而在一段**多语言字符串池**中
 
 | 文件 | 作用 |
 |---|---|
-| `tools/cn_pack10.py` | 本轮 93 条新词表 |
-| `tools/hud_cn.py` | HUD+ 字符串池汉化（0.2.2 版，可重复运行） |
-| `tools/scan_missing_text.py` | 修正转义处理 + 补全词表清单 |
-| `tools/test_pack_lua.py` | 端到端测试换成本轮的真实选项（18 项断言全通过） |
-| `tools/bump_arsenal_versions.py` | 模组更新后把 Arsenal 里中文 label 的版本号跟进到新版 |
-| `tools/build_packs2.py` | 输出目录改为动态解析 |
-| `tools/sync_dist.py` | 同上，且分发目录改为动态日期 |
+| `脚本/cn_pack10.py` | 本轮 93 条新词表 |
+| `脚本/hud_cn.py` | HUD+ 字符串池汉化（0.2.2 版，可重复运行） |
+| `脚本/scan_missing_text.py` | 修正转义处理 + 补全词表清单 |
+| `脚本/test_pack_lua.py` | 端到端测试换成本轮的真实选项（18 项断言全通过） |
+| `脚本/bump_arsenal_versions.py` | 模组更新后把 Arsenal 里中文 label 的版本号跟进到新版 |
+| `脚本/build_packs2.py` | 输出目录改为动态解析 |
+| `脚本/sync_dist.py` | 同上，且分发目录改为动态日期 |
 
 `bump_arsenal_versions.py` 的三个细节：
 
@@ -981,7 +981,7 @@ HUD+ 的界面文本不在 Lua 里，而在一段**多语言字符串池**中
 | 汉化包 B | Transmog 界面替换 **72** 处 |
 | HUD+ | 字符串池等长替换 **35** 处，文件长度 `721977` 字节**不变** |
 | 词表命中 | 30 个启用模组合计 **207** 条界面文本 |
-| 整包 | 30 个 zip，合计 **715.7 MB** → `HD2-模组合集-GNH个人汉化-2026-10-10` |
+| 整包 | 30 个 zip，合计 **715.7 MB** → `绝地潜兵2-模组合集-GNH个人汉化-2026-10-10` |
 
 剩余 **68 条**「未命中」**全部无需处理**：
 
@@ -1015,7 +1015,7 @@ Arsenal 里模组的**简介（description）**是从各模组自带的 `manifes
 **这与 HUD+ 的字符串池是同一类问题** —— 属于「上游一变就必须重跑」的一次性工序，
 不是汉化包本身的缺陷。
 
-#### 处置：新增 `tools/cn_mod_desc.py`
+#### 处置：新增 `脚本/cn_mod_desc.py`
 
 * 词表按**英文简介原文精确匹配**；原文本就是空的（C-Rig / BFV），则按模组目录名补一句
   （这两句是**我按模组实际功能补的**，原文没有，特此说明）。
@@ -1063,10 +1063,10 @@ HD2Runtime 对自己的位置没有任何要求（未提及）；两者资源 id
 
 | 步骤 | 脚本 | 作用 |
 |---|---|---|
-| 1 | `tools/bump_arsenal_versions.py` | 把中文 label 的版本号跟进到新版 |
-| 2 | `tools/cn_mod_desc.py` | 把被打回英文的模组简介换回中文 |
-| 3 | `tools/scan_missing_text.py` | 重新扫描界面文本，看有没有新增未翻译项 |
-| 4 | `tools/verify_desc_order.py` | 验收：简介全中文 + 关键顺序正确 |
+| 1 | `脚本/bump_arsenal_versions.py` | 把中文 label 的版本号跟进到新版 |
+| 2 | `脚本/cn_mod_desc.py` | 把被打回英文的模组简介换回中文 |
+| 3 | `脚本/scan_missing_text.py` | 重新扫描界面文本，看有没有新增未翻译项 |
+| 4 | `脚本/verify_desc_order.py` | 验收：简介全中文 + 关键顺序正确 |
 
 前两步都要求 **Arsenal 完全退出**，且都改同一个 `hd2a_data.json`，必须**串行执行**。
 
@@ -1096,7 +1096,7 @@ HD2Runtime 对自己的位置没有任何要求（未提及）；两者资源 id
 **"日志零更新"是最强的信号**：说明脚本**根本没机会执行**，崩溃发生在它之前的**资源加载阶段**。
 只查 Lua 逻辑、翻译表、长度限制，全是在错误的层面上找。
 
-**minidump 解析**（`tools/parse_hd2_dump.py`）：minidump 的 **ModuleListStream（type 4）**
+**minidump 解析**（`脚本/parse_hd2_dump.py`）：minidump 的 **ModuleListStream（type 4）**
 给出所有已加载模块的基址，**ExceptionStream（type 6）**给出异常代码与地址；
 把地址落到模块区间就能定位出错模块。本次即由此确定 `helldivers2.exe+0x5F2EB0`
 （而不是 `lua51.dll`），从而排除"Lua 报错"。
@@ -1147,7 +1147,7 @@ for i, (path, text) in enumerate(entries):
 **产物层（已修的数据）**：当前两包均已用新工具重建，记录区 0 问题，res_id 全部匹配。
 `data` 里已部署的旧文件需要**在 Arsenal 里重新 Deploy** 才会被替换。
 
-**应急脚本**：若日后又拿到被污染的包，可用 `tools/fix_patch_records.py --dry/--write`
+**应急脚本**：若日后又拿到被污染的包，可用 `脚本/fix_patch_records.py --dry/--write`
 逐字段修正（等长改写，文件大小不变）。
 
 ### 17.5 排查弯路（教训）
@@ -1167,9 +1167,9 @@ for i, (path, text) in enumerate(entries):
 
 | 工具 | 作用 |
 |---|---|
-| `tools/check_patch_records.py` | 全库检查 patch 记录区：bundleId 是否等于文件级值、保留字段是否全 0 |
-| `tools/fix_patch_records.py` | 修正被污染的记录区（等长改写，可 `--dry`） |
-| `tools/parse_hd2_dump.py` | 解析 `%APPDATA%\Arrowhead\Helldivers2\dumps\*.dmp`，输出异常代码/地址/出错模块 |
+| `脚本/check_patch_records.py` | 全库检查 patch 记录区：bundleId 是否等于文件级值、保留字段是否全 0 |
+| `脚本/fix_patch_records.py` | 修正被污染的记录区（等长改写，可 `--dry`） |
+| `脚本/parse_hd2_dump.py` | 解析 `%APPDATA%\Arrowhead\Helldivers2\dumps\*.dmp`，输出异常代码/地址/出错模块 |
 
 **固定动作补充**：每次重新打包汉化包后，**必须**跑一次 `check_patch_records.py`，
 确认"问题 entry 数 = 0"再交付。

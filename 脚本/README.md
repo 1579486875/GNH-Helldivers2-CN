@@ -233,5 +233,5 @@ _G.BingusTranslations = {
 ## 六、相关文档
 
 - 仓库根 `README.md` —— 汉化包的用户说明、安装方法、附录（含各技术专题）
-- `packing/` —— 打包产物清单与使用说明
+- `打包记录/` —— 打包产物清单与使用说明
 - 备份位置：`E:\TAML\_scratch\hd2\` 下的 `hud-backup/`、`stale-patches-backup/`、`arsenal-backup/`
